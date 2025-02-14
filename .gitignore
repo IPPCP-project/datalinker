@@ -1,0 +1,16 @@
+.venv
+__pycache__
+*.pid
+logs
+airflow.cfg
+dags
+first_config_airflow.sh
+other
+preprocessing.sh
+run_airflow.sh
+webserver_config.py
+airflow.db
+data
+logs
+rdf_store.db
+run_scheduler.sh

@@ -1,0 +1,65 @@
+{% extends base_template %}
+
+
+{% block content %}
+<h2>"{{ dataset['title'] }}" dataset</h2>
+  <p>{{ dataset['description'] }}</p>
+  <form action="{{ url_for('.delete', dataset_id=dataset_id) }}" method="POST">
+    <label>Raw dataset</label>
+    <p>Filename: <a class="action" href="{{ file_url }}">{{ dataset['filename'] }}</a>
+    <input class="danger" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
+  </p>
+  </form>
+  <hr>
+  <form method="post" enctype="multipart/form-data">
+    <label>Pre-processing</label>
+    <p>Preprocessing operations:
+        {% if dataset['preproc_ops'] == None %}
+        <input type='file' name='preproc_ops_file'> <input type="submit" value="Load" formaction="{{url_for('.load_preproc_ops', dataset_id=dataset_id)}}">
+        {% else %}
+        <input name="template" id="template" value="preprocessing" type="hidden">
+        <a class="action" href="{{ preproc_file_url }}">{{ dataset['preproc_ops_filename'] }}</a>
+        <input type="submit" value="Generate DAG" formaction="{{url_for('.generate_dag', template='preprocessing', dataset_id=dataset_id)}}" formmethod="post">  
+        <input type="submit" value="Trigger DAG" formaction="{{url_for('.trigger_dag', dataset_id=dataset_id)}}" formmethod="post">  
+        {% endif %}
+    </p>
+  </form>
+  <hr>
+  <form method="post" enctype="multipart/form-data">
+    <label>Mapping</label>
+    <p>RML mappings:
+        {% if dataset['mappings'] == None %}
+        <input type='file' name='mappings_file'> <input type="submit" value="Load" formaction="{{url_for('.load_mappings', dataset_id=dataset_id)}}">
+        {% else %}
+        <input name="template" id="template" value="mapping" type="hidden">
+        <a class="action" href="{{ preproc_file_url }}">{{ dataset['mappings_filename'] }}</a>
+        <input type="submit" value="Generate DAG" formaction="{{url_for('.generate_dag', template='mapping', dataset_id=dataset_id)}}" formmethod="post">  
+        <input type="submit" value="Trigger DAG" formaction="{{url_for('.trigger_dag', dataset_id=dataset_id)}}" formmethod="post">  
+        {% endif %}
+    </p>
+  </form>
+  <hr>
+  <form method="post" enctype="multipart/form-data">
+    <label>Data validation</label>
+    {{ dataset['shapes'] }}
+    <p>SHACL shapes:
+        {% if dataset['shapes'] == None %}
+        <input type='file' name='shapes_file'> <input type="submit" value="Load" formaction="{{url_for('.load_shapes', dataset_id=dataset_id)}}">
+        {% else %}
+        <input name="template" id="template" value="validation" type="hidden" >
+        <a class="action" href="{{ preproc_file_url }}">{{ dataset['shapes_filename'] }}</a>
+        <input type="submit" value="Generate DAG" formaction="{{url_for('.generate_dag', template='validation', dataset_id=dataset_id)}}" formmethod="post">  
+        <input type="submit" value="Trigger DAG" formaction="{{url_for('.trigger_dag', dataset_id=dataset_id)}}" formmethod="post">  
+        {% endif %}
+    </p>
+  </form>
+  <hr>
+  <form action="">
+    <div>
+      <input type="submit" value="Save" formmethod="post">
+      <input type="submit" value="Back" formaction="{{url_for('.index')}}" formmethod="get">  
+    </div>
+  </form>     
+ 
+  <hr>
+{% endblock %}  
