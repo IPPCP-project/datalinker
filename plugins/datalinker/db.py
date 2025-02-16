@@ -9,58 +9,39 @@ def get_db():
         g.db.open("sqlite:///rdf_store.db", create=True) 
     return g.db
 
-def get_projects():
-    db = get_db()
+def get_projects(id="?project_id"):
+    db = get_db()    
+    # Convert to pass a string argument
+    if id != "?project_id":
+        id = f'"{id}"'
     # Query using SPARQL
     query = """
-        PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-        PREFIX dl: <http://datalinker.net/ldp/ontology#>
-        PREFIX dcterms: <http://purl.org/dc/terms/> 
-        SELECT * WHERE{
-            <%s> foaf:currentProject ?project.
-            ?project rdfs:label ?title;
-                dcterms:created ?created;
-                # dcterms:modified ?modified;
-                dcterms:identifier ?id.
-        }""" % (g.user["user"]["value"])
-    query = """
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-    PREFIX dl: <http://datalinker.io/ld/ontology#>
+    PREFIX dl: <http://datalinker.net/ldp/ontology#>
     PREFIX dcterms: <http://purl.org/dc/terms/> 
-    PREFIX dcat: <http://www.w3.org/ns/dcat#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-
-    SELECT DISTINCT * WHERE {
-        ?dataset_uri a dcat:Dataset;
-            dl:filename ?filename;
-            dcterms:title ?title;
+    SELECT * WHERE{
+        ?project_uri a foaf:Project;
+            rdfs:label ?title;
             rdfs:comment ?description;
             dcterms:created ?created;
             dcterms:identifier %s.
-            OPTIONAL {
-            ?dataset_uri dl:preprocessingOperations ?preproc_ops.
-            ?preproc_ops dl:filename ?preproc_ops_filename;
-                        dcterms:identifier ?preproc_ops_id.
-            }
-            OPTIONAL {
-            ?dataset_uri dl:mappings ?mappings.
-            ?mappings dl:filename ?mappings_filename;
-                        dcterms:identifier ?mappings_id.
-            }
-            OPTIONAL {
-            ?dataset_uri dl:shapes ?shapes.
-            ?shapes dl:filename ?shapes_filename;
-                        dcterms:identifier ?shapes_id.
-            }
-    }"""% id 
+    }""" % (id)
     projects = db.query(query)
+    # For a specific results the "projects" is a single output instead of a set
+
+    if id != "?project_id":
+        for project in projects:
+            projects = project
 
     return projects
 
-def get_datasets(id="?id"):
+
+def get_datasets(pj_id="?project_id", id="?dataset_id"):
     db = get_db()
     # Convert to pass a string argument
-    if id != "?id":
+    if pj_id != "?project_id":
+        pj_id = f'"{pj_id}"'
+    if id != "?dataset_id":
         id = f'"{id}"'
     # Query using SPARQL
     query = """
@@ -71,6 +52,9 @@ def get_datasets(id="?id"):
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
     SELECT DISTINCT * WHERE {
+        ?project_uri a foaf:Project;
+            dcterms:identifier %s;
+            dcat:dataset ?dataset_uri.            
         ?dataset_uri a dcat:Dataset;
             dl:filename ?filename;
             dcterms:title ?title;
@@ -92,10 +76,10 @@ def get_datasets(id="?id"):
             ?shapes dl:filename ?shapes_filename;
                         dcterms:identifier ?shapes_id.
             }
-    }"""% id 
+    }"""% (pj_id, id) 
     datasets = db.query(query)
     # For a specific results the "datasets" is a single output instead of a set
-    if id != "?id":
+    if id != "?dataset_id":
         for dataset in datasets:
             datasets = dataset
 

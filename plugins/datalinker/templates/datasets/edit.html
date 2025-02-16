@@ -1,7 +1,7 @@
 {% extends base_template %}
 
 {% block content %}
-<h2>Edit "{{ dataset['title'] }}"</h2>
+<h2>Edit {{ project['title'] }}: "{{ dataset['title'] }}" dataset</h2>
   <form action="" method="post">
     <label for="title">Title</label>
     <input name="title" id="title" value="{{ request.form['title'] or dataset['title'] }}" required>
@@ -11,11 +11,11 @@
     <br>
     <div>
       <input type="submit" value="Save" formmethod="post">
-      <input type="submit" value="Cancel" formaction="{{(url_for('.index'))}}" formmethod="get">  
+      <input type="submit" value="Cancel" formaction="{{(url_for('.ds_index', project_id=dataset['project_id']))}}" formmethod="get">  
     </div>
   </form> 
   <hr>
-  <form action="{{ url_for('.delete', dataset_id=dataset_id) }}" method="POST">
+  <form action="{{ url_for('.ds_delete', project_id=dataset['project_id'], dataset_id=dataset_id) }}" method="POST">
     <input class="danger" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
   </form>
 {% endblock %}  

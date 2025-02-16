@@ -7,23 +7,27 @@
 
 {% block content %}
 
-<h2> Datalinker datasets </h2>
-<a class="action" href="{{ url_for('.create') }}">Create dataset </a>
+<h2> "{{ project['title'] }}" datasets </h2>
+<a class="action" href="{{ url_for('.ds_create', project_id=project_id) }}">Create dataset </a>
 
 {% for dataset in datasets %}
   <article>
     <header>
       <div>
-        <h3> <a href="{{ url_for('.config', dataset_id=dataset['id']) }}">{{ dataset['title'] }}</a></h1>
+        <h3> <a href="{{ url_for('.ds_config', dataset_id=dataset['dataset_id']) }}">{{ dataset['title'] }}</a></h1>
         <div> created on {{ dataset['created'][0:19] }}</div>
       </div>
-        <a class="action" href="{{ url_for('.edit', dataset_id=dataset['id']) }}">Edit</a>
-        <a class="action" href="{{ url_for('.config', dataset_id=dataset['id']) }}">Open</a>
+        <a class="action" href="{{ url_for('.ds_edit', dataset_id=dataset['dataset_id']) }}">Edit</a>
+        <a class="action" href="{{ url_for('.ds_config', dataset_id=dataset['dataset_id']) }}">Open</a>
     </header>
     <p class="body">{{ dataset['description'] }} </p>
     <hr>
   </article>
 {% endfor %}
+
+<form action="{{ url_for('.pj_index') }}" method="get">
+  <input type="submit" value="Back to projects" >
+</form>
 
 <article class="project">
     <form >

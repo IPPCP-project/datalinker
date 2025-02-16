@@ -7,16 +7,15 @@ from datetime import datetime, timedelta
 from airflow import configuration as conf
 from docker.types import Mount
 
-{{ id }}_refined = Dataset("dl://{{ id }}/refined")
-{{ id }}_rdf = Dataset("dl://{{ id }}/rdf")
-{{ id }}_report = Dataset("dl://{{ id }}/report")
+{{ dataset_id }}_rdf = Dataset("dl://{{ dataset_id }}/rdf")
+{{ dataset_id }}_report = Dataset("dl://{{ dataset_id }}/report")
 
 with DAG(
-    dag_id="{{ id }}_validation", 
-    description="LD validation DAG for '{{ id }}' dataset",
+    dag_id="{{ dataset_id }}_validation", 
+    description="LD validation DAG for '{{ dataset_id }}' dataset",
     start_date=datetime(year=2025, month=2, day=1) , 
     catchup=False,
-    schedule=[{{ id }}_rdf] ,
+    schedule=[{{ dataset_id }}_rdf] ,
     default_args={
         'owner': 'admin',
         'retries': 5,
@@ -29,9 +28,9 @@ with DAG(
         image="cli_data_validator:latest",
         auto_remove="force",
         network_mode="bridge",
-        outlets = [{{ id }}_report],
+        outlets = [{{ dataset_id }}_report],
         mounts=[
-            Mount(source=os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ id }}"), target="/cli-data-validator/data", type="bind"),
+            Mount(source=os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}/{{ dataset_id }}"), target="/cli-data-validator/data", type="bind"),
         ], 
         task_id="validation",
         # do_xcom_push=True,

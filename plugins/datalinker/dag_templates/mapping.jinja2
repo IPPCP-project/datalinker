@@ -7,15 +7,15 @@ from datetime import datetime, timedelta
 from airflow import configuration as conf
 from docker.types import Mount
 
-{{ id }}_refined = Dataset("dl://{{ id }}/refined")
-{{ id }}_rdf = Dataset("dl://{{ id }}/rdf")
+{{ dataset_id }}_refined = Dataset("dl://{{ dataset_id }}/refined")
+{{ dataset_id }}_rdf = Dataset("dl://{{ dataset_id }}/rdf")
 
 with DAG(
-    dag_id="{{ id }}_mapping", 
-    description="LD mapping and materialisation DAG for '{{ id }}' dataset",
+    dag_id="{{ dataset_id }}_mapping", 
+    description="LD mapping and materialisation DAG for '{{ dataset_id }}' dataset",
     start_date=datetime(year=2025, month=2, day=1) , 
     catchup=False,
-    schedule=[{{ id }}_refined] ,
+    schedule=[{{ dataset_id }}_refined] ,
     default_args={
         'owner': 'admin',
         'retries': 5,
@@ -24,7 +24,7 @@ with DAG(
     ) as dag:
 
     mapping_config = BashOperator(
-        cwd = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ id }}"),
+        cwd = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}/{{ dataset_id }}"),
         task_id='mapping_config',
         bash_command="echo [CONFIGURATION]>mappings/config.ini; \
                       echo output_file = files/rdf/{{ filename }}-output.nq>>mappings/config.ini; \
@@ -41,9 +41,9 @@ with DAG(
         image="morph-kgc:latest",
         auto_remove="force",
         network_mode="bridge",
-        outlets = [{{ id }}_rdf],
+        outlets = [{{ dataset_id }}_rdf],
         mounts=[
-            Mount(source=os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ id }}"), target="/app/files/", type="bind"),
+            Mount(source=os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}/{{ dataset_id }}"), target="/app/files/", type="bind"),
         ], 
         task_id="materialisation",
         # do_xcom_push=True,

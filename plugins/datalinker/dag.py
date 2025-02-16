@@ -18,12 +18,13 @@ def generate():
                     f.write(template.render(inputs))
 
 def generate_one(template, dataset_id):
-    dataset = get_datasets(dataset_id)
+    dataset = get_datasets(id=dataset_id)
     plugin_dir = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/")
     env = Environment(loader=FileSystemLoader(plugin_dir))
     template_obj = env.get_template(f'dag_templates/{template}.jinja2')
     
-    inputs = { 'id': dataset_id,
+    inputs = { 'dataset_id': dataset_id,
+               'project_id' : dataset['project_id'],
                'filename': dataset['filename'].split(".")[0],
                'mappings_filename': dataset['mappings_filename'],
                'shapes_filename': dataset['shapes_filename'] }

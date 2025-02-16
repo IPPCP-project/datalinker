@@ -4,7 +4,7 @@
 {% block content %}
 <h2>"{{ dataset['title'] }}" dataset</h2>
   <p>{{ dataset['description'] }}</p>
-  <form action="{{ url_for('.delete', dataset_id=dataset_id) }}" method="POST">
+  <form action="{{ url_for('.ds_delete', project_id=project_id, dataset_id=dataset_id) }}" method="POST">
     <label>Raw dataset</label>
     <p>Filename: <a class="action" href="{{ file_url }}">{{ dataset['filename'] }}</a>
     <input class="danger" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
@@ -33,7 +33,7 @@
         {% else %}
         <input name="template" id="template" value="mapping" type="hidden">
         <a class="action" href="{{ preproc_file_url }}">{{ dataset['mappings_filename'] }}</a>
-        <input type="submit" value="Generate DAG" formaction="{{url_for('.generate_dag', template='mapping', dataset_id=dataset_id)}}" formmethod="post">  
+        <input type="submit" value="Generate DAG" formaction="{{url_for('.generate_dag', template='mapping',  dataset_id=dataset_id)}}" formmethod="post">  
         <input type="submit" value="Trigger DAG" formaction="{{url_for('.trigger_dag', dataset_id=dataset_id)}}" formmethod="post">  
         {% endif %}
     </p>
@@ -57,7 +57,7 @@
   <form action="">
     <div>
       <input type="submit" value="Save" formmethod="post">
-      <input type="submit" value="Back" formaction="{{url_for('.index')}}" formmethod="get">  
+      <input type="submit" value="Back" formaction="{{url_for('.ds_index', project_id=project_id)}}" formmethod="get">  
     </div>
   </form>     
  

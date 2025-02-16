@@ -1,7 +1,7 @@
 {% extends base_template %}
 
 {% block content %}
-<h2> New dataset </h2>
+<h2> New dataset in "{{ project['title'] }}" project </h2>
   <form method="post" enctype="multipart/form-data">
     <label for="title">Dataset ID</label>
     <input name="dataset_id" id="dataset_id" value="{{ request.form['dataset_id'] }}" required>
@@ -15,8 +15,8 @@
     <br>
       <input type="submit" value="Save and upload">
   </form>
-  <form action="{{ url_for('.index') }}" method="get">
+  <form action="{{ url_for('.ds_index', project_id=project_id) }}" method="get">
     <input type="submit" value="Cancel" >
   </form>
-  
+    
 {% endblock %}

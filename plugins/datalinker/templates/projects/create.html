@@ -1,0 +1,26 @@
+{% extends base_template %}
+
+{% block content %}
+<h2>New Project</h1>
+  <form action="" method="post">
+    <label for="project_id">Project ID</label>
+    <input name="project_id" id="project_id" value="{{ request.form['project_id'] }}" >
+    <label for="title">Title</label>
+    <input name="title" id="title" value="{{ request.form['title'] }}" >
+    <br>
+    <label for="body">Description</label>
+    <textarea name="body" id="body" >{{ request.form['body'] }}</textarea>
+    <br>
+    <label for="use_case">Use case definition</label>
+    <textarea name="use_case" id="use_case" >{{ request.form['use_case'] }}</textarea>
+    <br>
+    <label for="data_req">Data requirements</label>
+    <textarea name="data_req" id="data_req" >{{ request.form['data_req'] }}</textarea>    
+    <hr>
+    <div>
+      <input type="submit" value="Save" formmethod="post">
+      <input type="submit" value="Cancel" formaction="{{url_for('.pj_index')}}" formmethod="get">  
+    </div>
+  </form>
+  
+{% endblock %}
