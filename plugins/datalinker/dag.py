@@ -25,7 +25,7 @@ def generate_one(template, dataset_id):
     
     inputs = { 'dataset_id': dataset_id,
                'project_id' : dataset['project_id'],
-               'filename': dataset['filename'].split(".")[0],
+               'filename': dataset['filename'], #.split(".")[0],
                'mappings_filename': dataset['mappings_filename'],
                'shapes_filename': dataset['shapes_filename'] }
 
@@ -36,6 +36,10 @@ def generate_one(template, dataset_id):
 
 def parse_dags():
     command = ["airflow", "dags", "reserialize"]
+    result = subprocess.run(command, capture_output=True, text=True)
+
+def unpause(dag_id):
+    command = ["airflow", "dags", "unpause", dag_id]
     result = subprocess.run(command, capture_output=True, text=True)
 
 def trigger(dag_id):

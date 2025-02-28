@@ -1,26 +1,89 @@
 {% extends base_template %}
 
 {% block content %}
-<h2>New Project</h1>
-  <form action="" method="post">
-    <label for="project_id">Project ID</label>
-    <input name="project_id" id="project_id" value="{{ request.form['project_id'] }}" >
-    <label for="title">Title</label>
-    <input name="title" id="title" value="{{ request.form['title'] }}" >
-    <br>
-    <label for="body">Description</label>
-    <textarea name="body" id="body" >{{ request.form['body'] }}</textarea>
-    <br>
-    <label for="use_case">Use case definition</label>
-    <textarea name="use_case" id="use_case" >{{ request.form['use_case'] }}</textarea>
-    <br>
-    <label for="data_req">Data requirements</label>
-    <textarea name="data_req" id="data_req" >{{ request.form['data_req'] }}</textarea>    
-    <hr>
-    <div>
-      <input type="submit" value="Save" formmethod="post">
-      <input type="submit" value="Cancel" formaction="{{url_for('.pj_index')}}" formmethod="get">  
-    </div>
-  </form>
-  
+<div class="col-sm-12">
+<div class="row">
+  <div class="col-sm-12">
+    <h5> Datalinker</h5>
+  </div>
+</div>
+<div class="row">
+  <div class="col-sm-12">
+    <h4>New Project</h4>
+  </div>
+</div>
+<div class="row">
+    <form class="form-horizontal" action="" method="post" role="form">
+      <div class="form-group">
+        <label class="col-sm-2 control-label" for="project_id">Project ID</label>
+        <div class="col-sm-8">
+          <input type="text" class="form-control" name="project_id" id="project_id" value="{{ request.form['project_id'] }}" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label" for="title">Title</label>
+        <div class="col-sm-8">
+          <input type="text" class="form-control" name="title" id="title" value="{{ request.form['title'] }}" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label" for="body">Description</label>
+        <div class="col-sm-8">
+          <textarea class="form-control" name="body" id="body" rows="2" required>{{ request.form['body'] }}</textarea>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label" for="use_case">Use case definition</label>
+        <div class="col-sm-8">
+          <textarea class="form-control" name="use_case" id="use_case" rows="2" >{{ request.form['use_case'] }}</textarea>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label" for="data_req">Data requirements</label>
+        <div class="col-sm-8">
+          <textarea class="form-control" name="data_req" id="data_req" rows="2" >{{ request.form['data_req'] }}</textarea>      
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label" for="d_sources">Data sources</label>
+        <div class="col-sm-8" id="sources-list">
+          <input class="form-control" name="d_sources"  placeholder="Put here your data sources url" style="margin-bottom:5px">
+        </div>
+        <div class="col-sm-offset-2 col-sm-8">
+          <button class="btn btn-success add-item-button" formnovalidate><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add URI</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-offset-2 col-sm-8">
+          <input class="btn btn-primary" type="submit" value="Save" formmethod="post">
+          <input class="btn btn-secondary" type="submit" value="Cancel" formaction="{{url_for('.pj_index')}}" formmethod="get" formnovalidate>  
+        </div>
+      </div>
+    </form>
+</div>
+</div> 
+
+<script>
+  $(document).ready(function(){
+    $(".add-item-button").click(function(e){
+      e.preventDefault();
+      $("#sources-list").append(`
+      <div class="input-group">
+        <input class="form-control" placeholder="Put here your data sources url">
+        <span class="input-group-btn">
+          <button id="remove-item-btn" class="btn btn-danger remove-item-btn " style="margin-bottom:5px" formnovalidate>
+            <span class="glyphicon glyphicon-trash"></span>
+          </button>
+        </span>
+      </div>
+      `);
+    });
+    $(document).on('click', '.remove-item-btn', function(e) {
+      e.preventDefault();
+      let row_item = $(this).parent().parent();
+      $(row_item).remove();
+    })
+  })
+</script>
+
 {% endblock %}

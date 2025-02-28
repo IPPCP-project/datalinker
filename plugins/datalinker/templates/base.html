@@ -1,19 +1,9 @@
-<!doctype html>
-<title>{% block title %}{% endblock %} - DataLinker</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<nav>
-  <h1>DataLinker</h1>
-  <ul>
-      <li>Register
-      <li>Log In
-  </ul>
-</nav>
-<section class="content">
-  <header>
-    {% block header %}{% endblock %}
-  </header>
-  {% for message in get_flashed_messages() %}
-    <div class="flash">{{ message }}</div>
-  {% endfor %}
+{% extends base_template %}
+<div class="col-sm-12">
+  <div class="row">
+    <div class="col-sm-12">
+      <h5> Datalinker</h5>
+    </div>
+  </div>
   {% block content %}{% endblock %}
-</section>
+</div>

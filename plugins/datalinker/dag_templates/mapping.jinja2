@@ -27,12 +27,12 @@ with DAG(
         cwd = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}/{{ dataset_id }}"),
         task_id='mapping_config',
         bash_command="echo [CONFIGURATION]>mappings/config.ini; \
-                      echo output_file = files/rdf/{{ filename }}-output.nq>>mappings/config.ini; \
+                      echo output_file = files/rdf/{{ filename.split(".")[0] }}-output.nq>>mappings/config.ini; \
                       echo number_of_processes=1 >>mappings/config.ini; \
                       echo output_format=N-QUADS >>mappings/config.ini; \
                       echo [DataSourceCSV]>>mappings/config.ini; \
                       echo mappings=files/mappings/{{ mappings_filename }}>>mappings/config.ini; \
-                      echo file_path=files/refined/{{ filename }}.csv>>mappings/config.ini; \
+                      echo file_path=files/refined/{{ filename.split(".")[0] }}.csv>>mappings/config.ini; \
                       ",
         )
 

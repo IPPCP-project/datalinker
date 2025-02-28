@@ -1,39 +1,107 @@
 {% extends base_template %}
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-{% block title %}
-
-{% endblock %}
 
 {% block content %}
-
-<h2> "{{ project['title'] }}" datasets </h2>
-<a class="action" href="{{ url_for('.ds_create', project_id=project_id) }}">Create dataset </a>
-
-{% for dataset in datasets %}
-  <article>
-    <header>
-      <div>
-        <h3> <a href="{{ url_for('.ds_config', dataset_id=dataset['dataset_id']) }}">{{ dataset['title'] }}</a></h1>
-        <div> created on {{ dataset['created'][0:19] }}</div>
+<style>
+  .tab-content {
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    padding: 10px;
+  }
+</style>
+<div class="col-sm-12">
+<div class="row">
+  <div class="col-sm-12">
+    <h4><a href="{{url_for('.pj_index')}}"><small>Datalinker</small></a> {{ project['title'] }} </h4>
+  </div>
+</div>
+<ul class="nav nav-tabs" role="tablist">
+  <li role="presentation" class="active">
+    <a href="#details" aria-controls="home" role="tab" data-toggle="tab">Details</a>
+  </li>  
+  <li role="presentation">
+    <a href="#datasets" aria-controls="profile" role="tab" data-toggle="tab">Datasets</a>
+  </li>
+  <li role="presentation">
+    <a href="#ontology" aria-controls="messages" role="tab" data-toggle="tab">Ontology</a>
+  </li>
+  <li role="presentation">
+    <a href="#validation" aria-controls="settings" role="tab" data-toggle="tab">Validation</a>
+  </li>
+  <li role="presentation">
+    <a href="#verification" aria-controls="home" role="tab" data-toggle="tab">Verification</a>
+  </li>
+</ul>
+<div class="tab-content">
+  <div role="tabpanel" class="tab-pane fade in active" id="details">
+    <br>
+    <label for="title">Project title</label>
+    <p>{{ project['title'] }}</p>
+    <label for="description">Description</label>
+    <p>{{ project['description'] }}</p>
+    <label for="project_id">Project ID</label>
+    <p>{{ project_id }}</p>
+    <label for="creation_date">Creation date</label>
+    <p>{{ project['created'] }}</p>
+    <label for="project_uri">Project URI</label>
+    <p>{{ project['project_uri'] }}</p>    
+  </div>
+  <div role="tabpanel" class="tab-pane fade active" id="datasets">
+    <div class="row">
+      <div class="col-sm-12">
+        <a class="action" href="{{ url_for('.ds_create', project_id=project_id) }}">Create dataset </a>
       </div>
-        <a class="action" href="{{ url_for('.ds_edit', dataset_id=dataset['dataset_id']) }}">Edit</a>
-        <a class="action" href="{{ url_for('.ds_config', dataset_id=dataset['dataset_id']) }}">Open</a>
-    </header>
-    <p class="body">{{ dataset['description'] }} </p>
+    </div>
+    <br>
+  {% for dataset in datasets %}
+  <div class="row" style="padding-left: 30px;">
+    <article>
+      <div class="col-sm-3">
+        <div>
+          <h4> <a href="{{ url_for('.ds_config', dataset_id=dataset['dataset_id']) }}">{{ dataset['title'] }}</a></h4>
+          <div> created on {{ dataset['created'][0:16] }}</div>
+        </div>
+          <a class="action" href="{{ url_for('.ds_edit', dataset_id=dataset['dataset_id']) }}">Edit</a>
+          <a class="action" href="{{ url_for('.ds_config', dataset_id=dataset['dataset_id']) }}">Open</a>
+          <p class="body">{{ dataset['description'] }} </p>
+      </div>
+      <div class="col-sm-9 col-sm-pull-1">
+      <iframe src="{{ url_for('.ds_profile', dataset_id=dataset['dataset_id']) }}" style="height:250px;width:1000px;border:none;" title="Exploratory data analysis"></iframe>
+      </div>
+    </article>
+  </div>
+  <hr>
+  {% endfor %}
+  </div>
+  <div role="tabpanel" class="tab-pane fade active" id="ontology">
+    <br>
+    <label for="ontological_requirements">Ontological requirements</label>
+    <p>concepts attributes and relationships</p>
     <hr>
-  </article>
-{% endfor %}
-
-<form action="{{ url_for('.pj_index') }}" method="get">
-  <input type="submit" value="Back to projects" >
-</form>
-
-<article class="project">
-    <form >
-        <input type='file' name='raw_data_file' >
-        <input type='file' name='preproc_ops_file'> 
-        <input type="submit" value="Generate DAG" formmethod="post">  
+    <label for="resource_naming">Resource naming strategy</label>
+    <p>resources path UID identification</p>
+    <hr>
+    <form method="post" enctype="multipart/form-data" role="form">
+      <div class="form-group">
+        <label class="control-label" for="conceptualisation">Ontology conceptualisation</label>
+      {% if project['ontology_uri'] == None %}
+        <input class="form-control-file" type='file' name='ontology_file' required>
+      </div>
+      <input class="btn btn-primary" type="submit" value="Load" formaction="{{url_for('.load_ontology', project_id=project_id)}}" formmethod="post">
+      {% else %}
+      <input class="form-control" name="template" id="template" value="ontology" type="hidden">
+      <p><a class="action" href="{{ preproc_file_url }}">{{ project['ontology_filename'] }}</a></p>
+      </div>
+      <input class="btn btn-primary" type="submit" value="Validate with OOPS" formaction="{{url_for('.pj_index')}}" formmethod="post">
+      <input class="btn btn-primary" type="submit" value="Generate Astrea Shapes" formaction="{{url_for('.pj_index')}}" formmethod="post">  
+      {% endif %}
+      <hr>
     </form>
-  </article>
+    </div>
+  </div>
+
+  <form action="{{ url_for('.pj_index') }}" method="get">
+    <input type="submit" value="Back to projects" >
+  </form>
+
 {% endblock %}

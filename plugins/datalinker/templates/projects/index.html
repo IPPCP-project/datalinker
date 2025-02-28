@@ -1,28 +1,29 @@
 {% extends base_template %}
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-{% block title %}
-
-{% endblock %}
-
 {% block content %}
-
-<h2> Datalinker projects </h2>
-<a class="action" href="{{ url_for('.pj_create') }}">New </a>
-
-{% for project in projects %}
-  <article>
-    <header>
-      <div>
-        <h3> <a href="{{ url_for('.ds_index', project_id=project['project_id']) }}">{{ project['title'] }}</a></h1>
-        <div> created on {{ project['created'][0:10] }}</div>
-      </div>
-        <a class="action" href="{{ url_for('.pj_edit', project_id=project['project_id']) }}">Edit</a>
-        <a class="action" href="{{ url_for('.ds_index', project_id=project['project_id']) }}">Open</a>
-    </header>
-    <p class="body">{{ project['description'] }} </p>
+<div class="col-sm-12">
+<div class="row">
+  <div class="col-sm-12">
+    <h4><small>Datalinker</small> Projects</h5>
+    <a class="action" href="{{ url_for('.pj_create') }}">New </a>
+  </div>
+</div>
+<div class="row">
+    {% for project in projects %}
+    <div class="row" style="padding-left: 30px;">
+        <div class="col-sm-3">
+          <div>
+            <h4> <a href="{{ url_for('.ds_index', project_id=project['project_id']) }}">{{ project['title'] }}</a></h4>
+            <div> created on {{ project['created'][0:10] }}</div>
+          </div>
+            <a class="action" href="{{ url_for('.pj_edit', project_id=project['project_id']) }}">Edit</a>
+            <a class="action" href="{{ url_for('.ds_index', project_id=project['project_id']) }}">Open</a>
+            <p class="body">{{ project['description'] }} </p>
+        </div>
+    </div>
     <hr>
-  </article>
-{% endfor %}
-
+    {% endfor %}
+</div>
+</div>
 {% endblock %}

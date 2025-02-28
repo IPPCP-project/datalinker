@@ -17,7 +17,7 @@ def get_projects(id="?project_id"):
     # Query using SPARQL
     query = """
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-    PREFIX dl: <http://datalinker.net/ldp/ontology#>
+    PREFIX dl: <http://datalinker.io/ld/ontology#>
     PREFIX dcterms: <http://purl.org/dc/terms/> 
     SELECT * WHERE{
         ?project_uri a foaf:Project;
@@ -25,6 +25,11 @@ def get_projects(id="?project_id"):
             rdfs:comment ?description;
             dcterms:created ?created;
             dcterms:identifier %s.
+            OPTIONAL {
+            ?project_uri dl:ontology ?ontology_uri.
+            ?ontology_uri dl:filename ?ontology_filename;
+                        dcterms:identifier ?ontology_id.
+            }
     }""" % (id)
     projects = db.query(query)
     # For a specific results the "projects" is a single output instead of a set

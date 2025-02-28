@@ -3,16 +3,14 @@ from airflow.plugins_manager import AirflowPlugin
 from flask import Blueprint, flash, request, redirect, url_for, send_from_directory, g
 from flask_appbuilder import BaseView as AppBuilderBaseView
 from flask_appbuilder import expose
-from datalinker.dag import generate, generate_one, trigger
+from datalinker.dag import generate, generate_one, trigger, unpause, parse_dags
 from datalinker.db import get_db, get_projects, get_datasets
 from datalinker.utils import allowed_file
+from datalinker.profile import compact_profile
 from airflow.www.app import csrf
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from airflow import configuration as conf
-from rdflib import Literal, Namespace, URIRef
-from rdflib.namespace import RDF, RDFS, FOAF, XSD
-from datetime import datetime
 
 class LD(AppBuilderBaseView):
     default_view = "pj_index"
@@ -32,6 +30,7 @@ class LD(AppBuilderBaseView):
             project_id = request.form['project_id']
             title = request.form['title']
             description = request.form['body']
+            flash(request.form )
             error = None
 
             if not project_id:
@@ -41,7 +40,7 @@ class LD(AppBuilderBaseView):
                 error = 'Title is required.'
 
             if not description:
-                error = 'Title is required.'
+                error = 'Description is required.'
 
             if error is not None:
                 flash(error)
@@ -169,6 +168,28 @@ class LD(AppBuilderBaseView):
             return redirect(url_for("Airflow.index"))
         return self.render_template("/datasets/index.html", project=project, project_id=project_id, datasets=datasets )
 
+
+    @expose('/resources/Dataset/<dataset_id>/profile', methods=('GET', 'POST'))
+    @csrf.exempt
+    def ds_profile(self, dataset_id):
+        dataset = get_datasets(id=dataset_id)
+        project_id = dataset['project_id']
+        profile_path = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/{dataset_id}/profile/{dataset_id}_profile.html")
+        with open(profile_path) as f:
+            html_data = f.read()
+        return compact_profile(html_data)
+
+    @expose('/resources/Dataset/<dataset_id>/full-profile', methods=('GET', 'POST'))
+    @csrf.exempt
+    def ds_full_profile(self, dataset_id):
+        dataset = get_datasets(id=dataset_id)
+        project_id = dataset['project_id']
+        profile_path = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/{dataset_id}/profile/{dataset_id}_profile.html")
+        with open(profile_path) as f:
+            html_data = f.read()
+        return html_data
+
+
     @expose("/resources/Project/<project_id>/create", methods=["GET", "POST"])
     @csrf.exempt
     def ds_create(self, project_id):
@@ -225,32 +246,32 @@ class LD(AppBuilderBaseView):
                             BIND(NOW() as ?created)
                         }""" % ( project['project_uri'], dataset_id, dataset_id, title, body, dataset_id, file.filename)
                         db.update(update)
-
-                        # DL = Namespace("http://datalinker.io/ld/ontology")
-                        # DCTERMS = Namespace("http://purl.org/dc/terms/")
-                        # DCAT = Namespace("http://www.w3.org/ns/dcat#")
-                        # dataset = URIRef(f"http://datalinker.io/ld/resources/Dataset/{dataset_id}")
-
-                        # db.add((dataset, RDF.type, DCAT.Dataset))
-                        # db.add((dataset, DCTERMS.title, Literal(title)))
-                        # db.add((dataset, DCTERMS.identifier, Literal(dataset_id)))
-                        # db.add((dataset, DCTERMS.created, Literal(datetime.now().strftime('%Y-%m-%dT%H:%M:%S') , datatype=XSD.dateTime)))
-                        # db.add((dataset, RDFS.comment, Literal(body)))
-                        # db.add((dataset, DL.filename, Literal(file.filename)))
-
                         db.commit()
                         # db.close()
 
                         # Set upload folders
+                        profile_folder = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/{dataset_id}/profile/")
+                        os.makedirs(profile_folder, exist_ok=True)
                         raw_data_folder = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/{dataset_id}/raw/")
                         os.makedirs(raw_data_folder, exist_ok=True)
-
                         refined_data_folder = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/{dataset_id}/refined/")
                         os.makedirs(refined_data_folder, exist_ok=True)
 
                         filename = secure_filename(file.filename)
                         # Copy raw data in the dataset folder
                         file.save(os.path.join(raw_data_folder, filename))
+                        # Generate and run data profiling DAG
+                        generate_one('data_profiling', dataset_id)
+                        dag_id = dataset_id + "_data_profiling"
+                        trigger(dag_id)
+                        unpause(dag_id)
+                        flash("Exploratory data analysis DAG created and running.")
+                        with open(os.path.join(profile_folder,f"{dataset_id}_profile.html"), "w") as file:
+                            file.write(""" <style> h4, p {font-family: Helvetica}</style>
+                                       <h4>Generating data profile...</h4> 
+                                       <p>Please reload when the exploratory data analysis is completed.</p> 
+                                       """)
+                        file.close()
                         return redirect(url_for('.ds_index', project_id=project_id))
                 except Exception as e:
                     error = e
@@ -331,7 +352,60 @@ class LD(AppBuilderBaseView):
                 error = e
                 flash(error)
             return redirect(url_for('.ds_index', project_id=project_id))
+        
+    @expose('/resources/Project/<project_id>/load-ontology', methods=('GET', 'POST'))
+    @csrf.exempt
+    def load_ontology(self, project_id):
+        project = get_projects(project_id)
+        if request.method == 'POST':
+            error = None
+            if 'ontology_file' not in request.files:
+                error = "No file part"
+            file = request.files['ontology_file']
+            if file.filename == '':
+                error = "No selected file"
+            if file and not allowed_file(file.filename, extensions_dict={'ttl', 'drawio'}):
+                error = "File with not allowed extension. ttl or drawio file expected."
+            if error is not None:
+                flash(error)
+            else:
+                try:
+                    ontology_id = project_id + "_ontology"
+                    db = get_db()
+                    update = """
+                    PREFIX dl: <http://datalinker.io/ld/ontology#>
+                    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                    PREFIX dcterms: <http://purl.org/dc/terms/>
+                    PREFIX dcat: <http://www.w3.org/ns/dcat#>
+                    PREFIX owl: <http://www.w3.org/2002/07/owl#>
 
+                    INSERT {
+                    <%s> dl:ontology
+                                <http://datalinker.io/ld/resources/Ontology/%s>.
+                    <http://datalinker.io/ld/resources/Ontology/%s> a owl:Ontology;
+                        dcterms:created ?created;
+                        dcterms:identifier "%s";
+                        dl:filename "%s".
+                    } 
+                    WHERE {
+                        BIND(NOW() as ?created)
+                    }""" % ( project['project_uri'], ontology_id, ontology_id, ontology_id, file.filename)
+                    db.update(update)
+                    db.commit()
+                    db.close()
+
+                    # Set upload folder
+                    upload_folder = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/ontology/")
+                    os.makedirs(upload_folder, exist_ok=True)
+
+                    filename = secure_filename(file.filename)
+                    # Copy raw data in the dataset folder
+                    file.save(os.path.join(upload_folder, filename))
+                    flash("Ontology file loaded.")
+                except Exception as e:
+                    error = e
+                    flash(error)
+        return redirect(url_for('.ds_index',project_id=project_id))
 
     @expose('/resources/Dataset/<dataset_id>/config', methods=('GET', 'POST'))
     @csrf.exempt
@@ -404,7 +478,7 @@ class LD(AppBuilderBaseView):
                 flash(error)
             else:
                 try:
-                    preproc_ops_id = dataset_id + "-preproc-ops"
+                    preproc_ops_id = dataset_id + "_preproc_ops"
                     db = get_db()
                     update = """
                     PREFIX dl: <http://datalinker.io/ld/ontology#>
@@ -465,7 +539,7 @@ class LD(AppBuilderBaseView):
                 flash(error)
             else:
                 try:
-                    mappings_id = dataset_id + "-mappings"
+                    mappings_id = dataset_id + "_mappings"
                     db = get_db()
                     update = """
                     PREFIX dl: <http://datalinker.io/ld/ontology#>
@@ -522,7 +596,7 @@ class LD(AppBuilderBaseView):
                 flash(error)
             else:
                 try:
-                    shapes_id = dataset_id + "-shapes"
+                    shapes_id = dataset_id + "_shapes"
                     db = get_db()
                     update = """
                     PREFIX dl: <http://datalinker.io/ld/ontology#>
@@ -572,7 +646,7 @@ class LD(AppBuilderBaseView):
         if request.method == 'POST': 
             try:
                 generate_one(template, dataset_id)
-                flash("DAG generated")
+                flash(f"{template} DAG generated")
 
             except Exception as e:
                 file_url = None
@@ -616,8 +690,8 @@ bp = Blueprint(
 
 v_appbuilder_view = LD()
 v_appbuilder_package = {
-    "name": "Datalinker",
-    "category": "DL Plugin",
+    "name": "Projects",
+    "category": "Datalinker",
     "view": v_appbuilder_view,
 }
 class AirflowLDPlugin(AirflowPlugin):
