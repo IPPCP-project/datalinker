@@ -34,17 +34,44 @@
 </ul>
 <div class="tab-content">
   <div role="tabpanel" class="tab-pane fade in active" id="details">
-    <br>
-    <label for="title">Project title</label>
-    <p>{{ project['title'] }}</p>
-    <label for="description">Description</label>
-    <p>{{ project['description'] }}</p>
-    <label for="project_id">Project ID</label>
-    <p>{{ project_id }}</p>
-    <label for="creation_date">Creation date</label>
-    <p>{{ project['created'] }}</p>
-    <label for="project_uri">Project URI</label>
-    <p>{{ project['project_uri'] }}</p>    
+    <div class="row">
+      <div class="col-sm-offset-1 col-sm-4">
+        <br>
+        <ul class="list-unstyled">
+        <label for="title">Project title</label>
+        <li class="list-group-item">{{ project['title'] }}</li>
+        <label for="description">Use case definition</label>
+        <li class="list-group-item">{{ project['use_case'] }}</li>
+        <label for="project_id">Project ID</label>
+        <li class="list-group-item">{{ project_id }}</li>
+        <label for="creation_date">Creation date</label>
+        <li class="list-group-item">{{ project['created'] }}</li>
+        <label for="project_uri">Project URI</label>
+        <li class="list-group-item"><a href="{{ project['project_uri'] }}">{{ project['project_uri'] }}</a></li>    
+        </ul>
+      </div>
+      <div class="col-sm-5 ">
+        <br>
+        <label for="title">Data requirements</label>
+        <ul class="list-unstyled">
+          {% for data_requirement in data_requirements %}
+          <li class="list-group-item">
+            {{ data_requirement['data_requirement'] }}
+          </li>
+          {% endfor %}
+        </ul>
+        <label for="title">Data sources</label>
+        <ul class="list-group list-group-flush">
+          {% for data_source in data_sources %}
+          <li class="list-group-item">
+            <a href="{{ data_source['data_source'] }}">{{ data_source['data_source'] }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="col-sm-offset-1 col-sm-1"> <a href="{{url_for('.pj_edit', project_id=project_id)}}">Edit</a></div>
+
+    </div>
   </div>
   <div role="tabpanel" class="tab-pane fade active" id="datasets">
     <div class="row">
@@ -90,11 +117,86 @@
       <input class="btn btn-primary" type="submit" value="Load" formaction="{{url_for('.load_ontology', project_id=project_id)}}" formmethod="post">
       {% else %}
       <input class="form-control" name="template" id="template" value="ontology" type="hidden">
-      <p><a class="action" href="{{ preproc_file_url }}">{{ project['ontology_filename'] }}</a></p>
+      <p><a class="action" href="{{url_for('.download', file_path=project_id+'/ontology/'+project['ontology_filename'])}}">{{ project['ontology_filename'] }}</a></p>
       </div>
       <input class="btn btn-primary" type="submit" value="Validate with OOPS" formaction="{{url_for('.pj_index')}}" formmethod="post">
-      <input class="btn btn-primary" type="submit" value="Generate Astrea Shapes" formaction="{{url_for('.pj_index')}}" formmethod="post">  
+      <input class="btn btn-primary" type="submit" value="Generate Astrea Shapes" formaction="{{url_for('.pj_index')}}" formmethod="post">
+      <div id="drawio-diagram"></div>
+      <script type="text/javascript" src="https://www.draw.io/js/viewer.min.js"></script>
+
+      <script>
+        (function () {
+            // Escape HTML
+            const chatMap = {
+                "&": "&amp;",
+                "'": "&#x27;",
+                "`": "&#x60;",
+                '"': "&quot;",
+                "<": "&lt;",
+                ">": "&gt;",
+            };
+
+            function replaceMatchedCharacters(match) {
+                return chatMap[match];
+            }
+
+            function escapeHTML(string) {
+                if (typeof string !== "string") return string;
+                return string.replace(/[&'`"<>]/g, replaceMatchedCharacters);
+            }
+
+            // Draw.io converter
+            function createMxGraphData(xml, idx = new Date().getTime()) {
+                return {
+                    editable: false,
+                    highlight: "#0000ff",
+                    nav: false,
+                    toolbar: null,
+                    edit: null,
+                    resize: true,
+                    lightbox: "open",
+                    xml,
+                };
+            }
+
+            async function drawioConverterAsync(xml, idx) {
+                return new Promise((resolve) => {
+                    const mxGraphData = createMxGraphData(xml, idx);
+                    const json = JSON.stringify(mxGraphData);
+                    const mxGraphHTML = createMxGraphHTML(json);
+                    resolve(mxGraphHTML);
+                });
+            }
+
+            function createMxGraphHTML(json) {
+                return `<div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph="${escapeHTML(json)}"></div>`;
+            }
+
+            // Load Draw.io file
+            function loadDrawioFile(url) {
+                fetch(url)
+                    .then((response) => {
+                        return response.text();
+                    })
+                    .then((data) => {
+                        return drawioConverterAsync(data);
+                    })
+                    .then((content) => {
+                        const graphContainer = document.getElementById('drawio-diagram');
+                        graphContainer.innerHTML = content;
+                        window.GraphViewer.processElements();
+                    })
+                    .catch((err) => {
+                        console.error("Error loading draw.io file:", err);
+                    });
+            }
+
+            // Initialize
+            loadDrawioFile("{{url_for('.download', file_path=project_id+'/ontology/'+project['ontology_filename'])}}");
+        })();
+      </script>  
       {% endif %}
+
       <hr>
     </form>
     </div>

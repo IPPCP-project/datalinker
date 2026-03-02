@@ -27,30 +27,27 @@
         </div>
       </div>
       <div class="form-group">
-        <label class="col-sm-2 control-label" for="body">Description</label>
+        <label class="col-sm-2 control-label" for="body">Use case definition</label>
         <div class="col-sm-8">
           <textarea class="form-control" name="body" id="body" rows="2" required>{{ request.form['body'] }}</textarea>
         </div>
       </div>
       <div class="form-group">
-        <label class="col-sm-2 control-label" for="use_case">Use case definition</label>
-        <div class="col-sm-8">
-          <textarea class="form-control" name="use_case" id="use_case" rows="2" >{{ request.form['use_case'] }}</textarea>
+        <label class="col-sm-2 control-label" for="d_reqs">Data requirements</label>
+        <div class="col-sm-8" id="d_reqs-list">
+          <input class="form-control" name="d_reqs"  placeholder="Put here your data requirement" style="margin-bottom:5px" required>
         </div>
-      </div>
-      <div class="form-group">
-        <label class="col-sm-2 control-label" for="data_req">Data requirements</label>
-        <div class="col-sm-8">
-          <textarea class="form-control" name="data_req" id="data_req" rows="2" >{{ request.form['data_req'] }}</textarea>      
+        <div class="col-sm-offset-2 col-sm-8">
+          <button class="btn btn-success add-req-button" formnovalidate><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
         </div>
       </div>
       <div class="form-group">
         <label class="col-sm-2 control-label" for="d_sources">Data sources</label>
         <div class="col-sm-8" id="sources-list">
-          <input class="form-control" name="d_sources"  placeholder="Put here your data sources url" style="margin-bottom:5px">
+          <input class="form-control" name="d_sources"  placeholder="Put here your data sources url" style="margin-bottom:5px" required>
         </div>
         <div class="col-sm-offset-2 col-sm-8">
-          <button class="btn btn-success add-item-button" formnovalidate><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add URI</button>
+          <button class="btn btn-success add-source-button" formnovalidate><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
         </div>
       </div>
       <div class="form-group">
@@ -65,11 +62,24 @@
 
 <script>
   $(document).ready(function(){
-    $(".add-item-button").click(function(e){
+    $(".add-req-button").click(function(e){
+      e.preventDefault();
+      $("#d_reqs-list").append(`
+      <div class="input-group">
+        <input class="form-control" placeholder="Put here your data requirement" name="d_reqs">
+        <span class="input-group-btn">
+          <button id="remove-item-btn" class="btn btn-danger remove-item-btn " style="margin-bottom:5px" formnovalidate>
+            <span class="glyphicon glyphicon-trash"></span>
+          </button>
+        </span>
+      </div>
+      `);
+    });
+    $(".add-source-button").click(function(e){
       e.preventDefault();
       $("#sources-list").append(`
       <div class="input-group">
-        <input class="form-control" placeholder="Put here your data sources url">
+        <input class="form-control" placeholder="Put here your data sources url" name="d_sources">
         <span class="input-group-btn">
           <button id="remove-item-btn" class="btn btn-danger remove-item-btn " style="margin-bottom:5px" formnovalidate>
             <span class="glyphicon glyphicon-trash"></span>

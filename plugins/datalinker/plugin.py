@@ -1,12 +1,12 @@
 import os, shutil
 from airflow.plugins_manager import AirflowPlugin
-from flask import Blueprint, flash, request, redirect, url_for, send_from_directory, g
+from flask import Blueprint, flash, request, redirect, url_for, send_file, g
 from flask_appbuilder import BaseView as AppBuilderBaseView
 from flask_appbuilder import expose
 from datalinker.dag import generate, generate_one, trigger, unpause, parse_dags
-from datalinker.db import get_db, get_projects, get_datasets
+from datalinker.db import get_db, get_projects, get_datasets, get_data_sources, get_data_requirements
 from datalinker.utils import allowed_file
-from datalinker.profile import compact_profile
+from datalinker.profile import compact_profile, get_variables
 from airflow.www.app import csrf
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -19,29 +19,42 @@ class LD(AppBuilderBaseView):
     @csrf.exempt
     def pj_index(self):
         projects = get_projects()
+        # for project in projects:
+        #     for ds in get_data_sources(project["project_id"]):
+        #         flash(ds["data_source"])
+        #     for dr in get_data_requirements(project["project_id"]):
+        #         flash(dr["data_requirement"])
 
         return self.render_template("/projects/index.html", projects=projects )
 
     @expose("/create-project", methods=["GET", "POST"])
     @csrf.exempt
     def pj_create(self):
-
         if request.method == 'POST':
             project_id = request.form['project_id']
             title = request.form['title']
-            description = request.form['body']
-            flash(request.form )
+            use_case = request.form['body']
+            d_reqs = request.form.getlist("d_reqs")
+            if len(d_reqs) > 1:
+                d_reqs = '", "'.join(d_reqs)
+            elif len(d_reqs) == 1:
+                d_reqs = "".join(d_reqs)
+            d_sources = request.form.getlist("d_sources")
+            if len(d_sources) > 1:
+                d_sources = "<"+">, <".join(d_sources)+">"
+            elif len(d_sources) == 1:
+                d_sources = "<"+"".join(d_sources)+">"
             error = None
-
             if not project_id:
                 error = 'Project ID is required.'
-
             if not title:
                 error = 'Title is required.'
-
-            if not description:
-                error = 'Description is required.'
-
+            if not use_case:
+                error = 'Use case definition is required.'
+            if not d_reqs:
+                error = 'At least one data requirement is required.'
+            if not d_sources:
+                error = 'At least one data source is required.'
             if error is not None:
                 flash(error)
             else:
@@ -54,23 +67,23 @@ class LD(AppBuilderBaseView):
                     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                     PREFIX dcterms: <http://purl.org/dc/terms/>
                     INSERT {
-                    <http://datalinker.io/ld/resources/Project/%s> a foaf:Project;
-                        rdfs:label "%s";
-                        rdfs:comment "%s";
-                        dcterms:created ?created;
+                    <http://datalinker.io/ld/resources/Project/%s> a dl:Project ;
+                        rdfs:label "%s" ;
+                        dl:useCaseDefinition "%s";
+                        dl:dataSource %s ;
+                        dl:dataRequirement "%s" ;
+                        dcterms:created ?created ;
                         dcterms:identifier "%s".
                     } 
                     WHERE {
                         BIND(NOW() as ?created)
-                    }""" % (project_id, title, description, project_id)
+                    }""" % (project_id, title, use_case, d_sources, d_reqs, project_id)
                     db.update(update)
                     db.commit()
                     # Set upload folders
                     project_folder = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/")
                     os.makedirs(project_folder, exist_ok=True)
-
                     return redirect(url_for('.pj_index'))
-
                 except Exception as e:
                     error = e
                     flash(error)
@@ -80,18 +93,31 @@ class LD(AppBuilderBaseView):
     @csrf.exempt
     def pj_edit(self, project_id):
         project = get_projects(project_id)
+        data_sources = get_data_sources(project_id)
+        data_requirements = get_data_requirements(project_id)
 
         if request.method == 'POST':
             title = request.form['title']
-            body = request.form['body']
+            use_case = request.form['body']
+            d_reqs = request.form.getlist("d_reqs")
+            if len(d_reqs) > 1:
+                d_reqs = '", "'.join(d_reqs)
+            elif len(d_reqs) == 1:
+                d_reqs = "".join(d_reqs)
+            d_sources = request.form.getlist("d_sources")
+            if len(d_sources) > 1:
+                d_sources = "<"+">, <".join(d_sources)+">"
+            elif len(d_sources) == 1:
+                d_sources = "<"+"".join(d_sources)+">"
             error = None
-
             if not title:
                 error = 'Title is required.'
-
-            if not body:
-                error = 'Description is required.'
-
+            if not use_case:
+                error = 'Use case definition is required.'
+            if not d_reqs:
+                error = 'At least one data requirement is required.'
+            if not d_sources:
+                error = 'At least one data source is required.'
             if error is not None:
                 flash(error)
             else:
@@ -99,16 +125,22 @@ class LD(AppBuilderBaseView):
                     db = get_db()
                     update = """
                     PREFIX foaf:  <http://xmlns.com/foaf/0.1/>
+                    PREFIX dl: <http://datalinker.io/ld/ontology#>
                     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                     PREFIX dcterms: <http://purl.org/dc/terms/> 
                     DELETE { <%s> rdfs:label ?title;
-                                rdfs:comment ?body. }
-                    INSERT { <%s> rdfs:label "%s";
-                                rdfs:comment "%s". }
-                    WHERE
-                    { <%s> rdfs:label ?title;
-                        rdfs:comment ?body.
-                    }""" % (project['project_uri'], project['project_uri'], title, body, project['project_uri'])
+                                dl:useCaseDefinition ?use_case ;
+                                dl:dataSource ?data_source ;
+                                dl:dataRequirement ?data_requirement . }
+                    INSERT { <%s> rdfs:label "%s" ;
+                                dl:useCaseDefinition "%s" ;
+                                dl:dataSource %s ;
+                                dl:dataRequirement "%s" . }
+                    WHERE { <%s> rdfs:label ?title;
+                                dl:useCaseDefinition ?use_case ;
+                                dl:dataSource ?data_source ;
+                                dl:dataRequirement ?data_requirement .
+                    }""" % (project['project_uri'], project['project_uri'], title, use_case, d_sources, d_reqs, project['project_uri'] )
                     db.update(update)
                     db.commit()
 
@@ -116,16 +148,9 @@ class LD(AppBuilderBaseView):
                     error = e
                     flash(error)
 
-                # db = get_db()
-                # db.execute(
-                #     'UPDATE project SET title = ?, body = ?'
-                #     ' WHERE id = ?',
-                #     (title, body, id)
-                # )
-                # db.commit()
                 return redirect(url_for('.pj_index'))
 
-        return self.render_template('projects/edit.html', project_id=project_id, project=project)
+        return self.render_template('projects/edit.html', project_id=project_id, project=project, data_requirements=data_requirements, data_sources=data_sources)
 
     @expose('/resources/Project/<project_id>/delete', methods=('POST',))
     @csrf.exempt
@@ -157,6 +182,8 @@ class LD(AppBuilderBaseView):
     def ds_index(self, project_id):
         project = get_projects(project_id)
         datasets = get_datasets(pj_id=project_id)
+        data_sources = get_data_sources(project_id)
+        data_requirements = get_data_requirements(project_id)
 
         if request.method == 'POST': 
             try:
@@ -166,7 +193,7 @@ class LD(AppBuilderBaseView):
                 error = e
                 flash(error)
             return redirect(url_for("Airflow.index"))
-        return self.render_template("/datasets/index.html", project=project, project_id=project_id, datasets=datasets )
+        return self.render_template("/datasets/index.html", project=project, project_id=project_id, datasets=datasets, data_requirements=data_requirements, data_sources=data_sources )
 
 
     @expose('/resources/Dataset/<dataset_id>/profile', methods=('GET', 'POST'))
@@ -194,12 +221,13 @@ class LD(AppBuilderBaseView):
     @csrf.exempt
     def ds_create(self, project_id):
         project = get_projects(project_id)
-        datasets = get_datasets(project_id)
+        datasets = get_datasets(pj_id=project_id)
+        data_sources = get_data_sources(project_id)
         if request.method == 'POST':
             dataset_id = project_id + "_" + request.form['dataset_id']
             title = request.form['title']
             body = request.form['body']
-
+            data_source = request.form['data_source']
             error = None
             if 'file' not in request.files:
                 error = "No file part"
@@ -219,9 +247,10 @@ class LD(AppBuilderBaseView):
             else:
                 try:
                     exist = False
-                    for dataset in datasets:
-                        if dataset["dataset_id"].eq(dataset_id) :
-                            exist =  True
+                    if len(datasets.bindings) >= 1:
+                        for dataset in datasets:
+                            if dataset["dataset_id"].eq(dataset_id) :
+                                exist =  True
                     if exist:
                         error = "Dataset ID already in use"
                         flash(error)
@@ -240,11 +269,12 @@ class LD(AppBuilderBaseView):
                             rdfs:comment "%s";
                             dcterms:created ?created;
                             dcterms:identifier "%s";
-                            dl:filename "%s".
+                            dl:filename "%s";
+                            dcat:landingPage <%s>.
                         } 
                         WHERE {
                             BIND(NOW() as ?created)
-                        }""" % ( project['project_uri'], dataset_id, dataset_id, title, body, dataset_id, file.filename)
+                        }""" % ( project['project_uri'], dataset_id, dataset_id, title, body, dataset_id, file.filename, data_source)
                         db.update(update)
                         db.commit()
                         # db.close()
@@ -260,23 +290,30 @@ class LD(AppBuilderBaseView):
                         filename = secure_filename(file.filename)
                         # Copy raw data in the dataset folder
                         file.save(os.path.join(raw_data_folder, filename))
+
                         # Generate and run data profiling DAG
-                        generate_one('data_profiling', dataset_id)
-                        dag_id = dataset_id + "_data_profiling"
-                        trigger(dag_id)
-                        unpause(dag_id)
-                        flash("Exploratory data analysis DAG created and running.")
+                        if filename.split(".")[1] == "csv":
+                            generate_one('data_profiling', dataset_id)
+                            dag_id = dataset_id + "_data_profiling"
+                            trigger(dag_id)
+                            unpause(dag_id)
+                            flash("Exploratory data analysis DAG created and running.")
                         with open(os.path.join(profile_folder,f"{dataset_id}_profile.html"), "w") as file:
-                            file.write(""" <style> h4, p {font-family: Helvetica}</style>
-                                       <h4>Generating data profile...</h4> 
-                                       <p>Please reload when the exploratory data analysis is completed.</p> 
-                                       """)
+                            if filename.split(".")[1] == "csv":
+                                file.write(""" <style> h4, p {font-family: Helvetica}</style>
+                                        <h4>Generating data profile...</h4> 
+                                        <p>Please reload when the exploratory data analysis is completed.</p> 
+                                        """)
+                            else:
+                                file.write(""" <style> h4, p {font-family: Helvetica; color:gray}</style>
+                                        <small><p>Data profile not yet supported for the file type provided.</p></small>  
+                                        """)
                         file.close()
                         return redirect(url_for('.ds_index', project_id=project_id))
                 except Exception as e:
                     error = e
                     flash(error)
-        return self.render_template("/datasets/create.html", project=project, project_id=project_id)
+        return self.render_template("/datasets/create.html", project=project, project_id=project_id, data_sources=data_sources)
 
     @expose('/resources/Dataset/<dataset_id>/edit', methods=('GET', 'POST'))
     @csrf.exempt
@@ -352,7 +389,169 @@ class LD(AppBuilderBaseView):
                 error = e
                 flash(error)
             return redirect(url_for('.ds_index', project_id=project_id))
-        
+
+    @expose("/resources/Project/<project_id>/config-ontology", methods=["GET", "POST"])
+    @csrf.exempt
+    def ont_config(self, project_id):
+        project = get_projects(project_id)
+        datasets = get_datasets(pj_id=project_id)
+        try:
+            variables = {}
+            for dataset in datasets:
+                dataset_id = dataset['dataset_id']
+                profile_path = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/{dataset_id}/profile/{dataset_id}_profile.html")
+                with open(profile_path) as f:
+                    html_data = f.read()
+                variables[dataset] = get_variables(html_data)
+        except Exception as e:
+            error = e
+            flash(error)
+        if request.method == 'POST':
+            project_id = request.form['project_id']
+            title = request.form['title']
+            use_case = request.form['body']
+            d_reqs = request.form.getlist("d_reqs")
+            if len(d_reqs) > 1:
+                d_reqs = '", "'.join(d_reqs)
+            elif len(d_reqs) == 1:
+                d_reqs = "".join(d_reqs)
+            d_sources = request.form.getlist("d_sources")
+            if len(d_sources) > 1:
+                d_sources = "<"+">, <".join(d_sources)+">"
+            elif len(d_sources) == 1:
+                d_sources = "<"+"".join(d_sources)+">"
+            error = None
+            if not project_id:
+                error = 'Project ID is required.'
+            if not title:
+                error = 'Title is required.'
+            if not use_case:
+                error = 'Use case definition is required.'
+            if not d_reqs:
+                error = 'At least one data requirement is required.'
+            if not d_sources:
+                error = 'At least one data source is required.'
+            if error is not None:
+                flash(error)
+            else:
+                try:
+                    # account_name = g.user.split(" ")[0]
+                    db = get_db()
+                    update = """
+                    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+                    PREFIX dl: <http://datalinker.io/ld/ontology#>
+                    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                    PREFIX dcterms: <http://purl.org/dc/terms/>
+                    INSERT {
+                    <http://datalinker.io/ld/resources/Project/%s> a dl:Project ;
+                        rdfs:label "%s" ;
+                        dl:useCaseDefinition "%s";
+                        dl:dataSource %s ;
+                        dl:dataRequirement "%s" ;
+                        dcterms:created ?created ;
+                        dcterms:identifier "%s".
+                    } 
+                    WHERE {
+                        BIND(NOW() as ?created)
+                    }""" % (project_id, title, use_case, d_sources, d_reqs, project_id)
+                    db.update(update)
+                    db.commit()
+                    # Set upload folders
+                    project_folder = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/")
+                    os.makedirs(project_folder, exist_ok=True)
+                    return redirect(url_for('.ds_index'))
+                except Exception as e:
+                    error = e
+                    flash(error)
+        return self.render_template('ontology/config.html', project=project, project_id=project_id)
+
+    @expose("/resources/Project/<project_id>/edit-ontology", methods=["GET", "POST"])
+    @csrf.exempt
+    def ont_edit(self, project_id):
+        project = get_projects(project_id)
+        data_sources = get_data_sources(project_id)
+        data_requirements = get_data_requirements(project_id)
+
+        if request.method == 'POST':
+            title = request.form['title']
+            use_case = request.form['body']
+            d_reqs = request.form.getlist("d_reqs")
+            if len(d_reqs) > 1:
+                d_reqs = '", "'.join(d_reqs)
+            elif len(d_reqs) == 1:
+                d_reqs = "".join(d_reqs)
+            d_sources = request.form.getlist("d_sources")
+            if len(d_sources) > 1:
+                d_sources = "<"+">, <".join(d_sources)+">"
+            elif len(d_sources) == 1:
+                d_sources = "<"+"".join(d_sources)+">"
+            error = None
+            if not title:
+                error = 'Title is required.'
+            if not use_case:
+                error = 'Use case definition is required.'
+            if not d_reqs:
+                error = 'At least one data requirement is required.'
+            if not d_sources:
+                error = 'At least one data source is required.'
+            if error is not None:
+                flash(error)
+            else:
+                try:
+                    db = get_db()
+                    update = """
+                    PREFIX foaf:  <http://xmlns.com/foaf/0.1/>
+                    PREFIX dl: <http://datalinker.io/ld/ontology#>
+                    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                    PREFIX dcterms: <http://purl.org/dc/terms/> 
+                    DELETE { <%s> rdfs:label ?title;
+                                dl:useCaseDefinition ?use_case ;
+                                dl:dataSource ?data_source ;
+                                dl:dataRequirement ?data_requirement . }
+                    INSERT { <%s> rdfs:label "%s" ;
+                                dl:useCaseDefinition "%s" ;
+                                dl:dataSource %s ;
+                                dl:dataRequirement "%s" . }
+                    WHERE { <%s> rdfs:label ?title;
+                                dl:useCaseDefinition ?use_case ;
+                                dl:dataSource ?data_source ;
+                                dl:dataRequirement ?data_requirement .
+                    }""" % (project['project_uri'], project['project_uri'], title, use_case, d_sources, d_reqs, project['project_uri'] )
+                    db.update(update)
+                    db.commit()
+
+                except Exception as e:
+                    error = e
+                    flash(error)
+
+                return redirect(url_for('.ds_index'))
+
+        return self.render_template('ontology/edit.html', project_id=project_id, project=project, data_requirements=data_requirements, data_sources=data_sources)
+
+    @expose('/resources/Project/<project_id>/delete-ontology', methods=('POST',))
+    @csrf.exempt
+    def ont_delete(self, project_id):
+        project = get_projects(project_id)
+        if request.method == 'POST':
+            try:
+                db = get_db()
+                delete = """
+                    DELETE WHERE {
+                        <%s> ?property ?value.
+                    }""" % (project['project_uri'])
+                db.update(delete)
+                db.commit()
+                db.close()
+
+                project_folder = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/")
+
+                shutil.rmtree(project_folder, ignore_errors=True)
+
+            except Exception as e:
+                error = e
+                flash(error)
+            return redirect(url_for('.ds_index'))
+
     @expose('/resources/Project/<project_id>/load-ontology', methods=('GET', 'POST'))
     @csrf.exempt
     def load_ontology(self, project_id):
@@ -382,7 +581,7 @@ class LD(AppBuilderBaseView):
                     INSERT {
                     <%s> dl:ontology
                                 <http://datalinker.io/ld/resources/Ontology/%s>.
-                    <http://datalinker.io/ld/resources/Ontology/%s> a owl:Ontology;
+                    <http://datalinker.io/ld/resources/Ontology/%s> a dl:Ontology;
                         dcterms:created ?created;
                         dcterms:identifier "%s";
                         dl:filename "%s".
@@ -406,6 +605,11 @@ class LD(AppBuilderBaseView):
                     error = e
                     flash(error)
         return redirect(url_for('.ds_index',project_id=project_id))
+
+    @expose('/download/<path:file_path>')
+    def download(self, file_path):
+        path = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{file_path}")
+        return send_file(path, as_attachment=False)
 
     @expose('/resources/Dataset/<dataset_id>/config', methods=('GET', 'POST'))
     @csrf.exempt

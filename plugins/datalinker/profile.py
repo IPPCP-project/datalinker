@@ -112,9 +112,21 @@ def compact_profile(html_data):
     except:
         pass
     return str(soup)
+
+def get_variables(html_data):
+    soup = BeautifulSoup(html_data, 'html.parser')
+    try:
+        dropdown = soup.find("select", class_="form-select")
+        options = dropdown.find_all("option")
+        variables = []
+        for option in options:
+            variables.append(option["value"])
+    except:
+        pass
+    return variables
 # %%
-# project_id = "zgz"
-# dataset_id = "zgz_mydataset"
+# project_id = "bigg"
+# dataset_id = "bigg_icaen"
 # profile_path = f"./data/{project_id}/{dataset_id}/profile/{dataset_id}_profile.html"
 
 # with open(profile_path) as f:

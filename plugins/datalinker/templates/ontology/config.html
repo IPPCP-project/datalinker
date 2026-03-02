@@ -1,0 +1,241 @@
+{% extends base_template %}
+
+{% block content %}
+<div class="col-sm-12">
+<div class="row">
+  <div class="col-sm-12">
+    <h4> <a href="{{url_for('.ds_index', project_id=project_id)}}"><small>Datalinker</small></a> {{ project['title'] }}</h4>
+  </div>
+</div>
+<div class="row">
+  <div class="col-sm-12">
+    <h4>Ontology configuration</h4>
+  </div>
+</div>
+<div class="row">
+    <form class="form-horizontal" action="" method="post" role="form">
+      <div class="form-group">
+        <label class="col-sm-3 control-label" style="color:gray">Requirements specification</label>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label" for="body">Purpose</label>
+        <div class="col-sm-8">
+          <textarea class="form-control" name="body" id="body" rows="2" required>{{ request.form['body'] }}</textarea>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label" for="body">Scope</label>
+        <div class="col-sm-8">
+          <textarea class="form-control" name="body" id="body" rows="2" required>{{ request.form['body'] }}</textarea>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-offset-1 col-sm-1 control-label" for="d_reqs">Non-functional requirements</label>
+        <div class="col-sm-8" id="d_reqs-list">
+          <input class="form-control" name="d_reqs"  placeholder="Write here your requirement" style="margin-bottom:5px" required>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:-15px;">
+        <div class="col-sm-offset-2 col-sm-8">
+          <button class="btn btn-success add-req-button" formnovalidate><span class="glyphicon glyphicon-plus" aria-hidden="true" ></span></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-offset-1 col-sm-1 control-label" for="d_reqs">Concepts and attributes</label>
+        <div class="col-sm-2">
+          <label>Dataset 1</label>
+          <input type="text" id="tag1" class="form-control" />
+        </div>
+        <div class="col-sm-2">
+          <label>Dataset 2</label>
+          <input type="text" id="tag1" class="form-control" />
+        </div>
+        <div class="col-sm-2">
+          <label>Dataset 3</label>
+          <input type="text" id="tag1" class="form-control" />
+        </div>
+        <div class="col-sm-2">
+          <label>Concept / attribute</label>
+          <input type="text" id="tag1" class="form-control" />
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:5px;">
+        <div class="col-sm-offset-2 col-sm-8">
+          <button class="btn btn-success add-req-button" formnovalidate><span class="glyphicon glyphicon-plus" aria-hidden="true" ></span></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-offset-1 col-sm-1 control-label" for="d_reqs">Relations</label>
+        <div class="col-sm-3">
+          <label>Concept / attribute</label>
+          <input type="text" id="tag1" class="form-control" />
+        </div>
+        <div class="col-sm-2">
+          <label>Relation</label>
+          <input type="text" id="tag1" class="form-control" />
+        </div>
+        <div class="col-sm-3">
+          <label>Target</label>
+          <input type="text" id="tag1" class="form-control" />
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:5px;">
+        <div class="col-sm-offset-2 col-sm-8">
+          <button class="btn btn-success add-req-button" formnovalidate><span class="glyphicon glyphicon-plus" aria-hidden="true" ></span></button>
+        </div>
+      </div>
+      <hr>
+      <div class="form-group">
+        <label class="col-sm-3 control-label" style="color:gray">Resource naming strategy</label>
+      </div>
+      <div class="form-group">
+        <div class="row">
+          <div class="col-sm-offset-1 col-sm-3">
+            <label>Base domain</label>
+            <input type="text" id="tag1" class="form-control" />
+          </div>
+          <div class="col-sm-2">
+            <label>Path</label>
+            <input type="text" id="tag1" class="form-control" />
+          </div>
+          <div class="col-sm-1">
+            <label> </label>
+            <input type="text" id="tag1" class="form-control" />
+          </div>
+          <div class="col-sm-2">
+            <label>Pattern</label>
+            <input type="text" id="tag1" class="form-control" />
+          </div>
+          <div class="col-sm-1">
+            <label>Prefix</label>
+            <input type="text" id="tag1" class="form-control" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:5px;">
+          <div class="col-sm-offset-4 col-sm-2">
+            <input type="text" id="tag1" class="form-control" />
+          </div>
+          <div class="col-sm-1">
+            <input type="text" id="tag1" class="form-control" />
+          </div>
+          <div class="col-sm-2">
+            <input type="text" id="tag1" class="form-control" />
+          </div>
+          <div class="col-sm-1">
+            <input type="text" id="tag1" class="form-control" />
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-offset-4 col-sm-8">
+          <button class="btn btn-success add-source-button" formnovalidate><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
+        </div>
+      </div>
+      <hr>
+      <div class="form-group">
+        <label class="col-sm-3 control-label" style="color:gray">Implementation and validation</label>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label" for="conceptualisation">Ontology conceptualisation</label>
+        <div class="col-sm-8">
+          <input class="form-control-file" type='file' name='ontology_file' style="margin-bottom:5px" required>
+          <input class="btn btn-primary" type="submit" value="Load" formaction="{{url_for('.load_ontology', project_id=project_id)}}" formmethod="post">
+        </div>
+      </div>
+      <hr>
+      <div class="form-group">
+        <div class="col-sm-offset-2 col-sm-8">
+          <input class="btn btn-primary" type="submit" value="Save" formmethod="post">
+          <input class="btn btn-secondary" type="submit" value="Cancel" formaction="{{url_for('.pj_index')}}" formmethod="get" formnovalidate>  
+        </div>
+      </div>
+    </form>
+</div>
+</div> 
+
+<script>
+  $(document).ready(function(){
+    $(".add-req-button").click(function(e){
+      e.preventDefault();
+      $("#d_reqs-list").append(`
+      <div class="input-group">
+        <input class="form-control" placeholder="Put here your data requirement" name="d_reqs">
+        <span class="input-group-btn">
+          <button id="remove-item-btn" class="btn btn-danger remove-item-btn " style="margin-bottom:5px" formnovalidate>
+            <span class="glyphicon glyphicon-trash"></span>
+          </button>
+        </span>
+      </div>
+      `);
+    });
+    $(".add-source-button").click(function(e){
+      e.preventDefault();
+      $("#sources-list").append(`
+      <div class="input-group">
+        <input class="form-control" placeholder="Put here your data sources url" name="d_sources">
+        <span class="input-group-btn">
+          <button id="remove-item-btn" class="btn btn-danger remove-item-btn " style="margin-bottom:5px" formnovalidate>
+            <span class="glyphicon glyphicon-trash"></span>
+          </button>
+        </span>
+      </div>
+      `);
+    });
+    $(document).on('click', '.remove-item-btn', function(e) {
+      e.preventDefault();
+      let row_item = $(this).parent().parent();
+      $(row_item).remove();
+    })
+  })
+</script>
+<link rel="stylesheet" href="https://bootstrap-tagsinput.github.io/bootstrap-tagsinput/dist/bootstrap-tagsinput.css">
+<style>
+/* autocomplete tagsinput*/
+.label-info {
+  background-color: #5bc0de;
+  display: inline-block;
+  padding: 0.2em 0.6em 0.3em;
+  font-size: 75%;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25em;
+}
+</style>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.js"></script>
+<script type="text/javascript" src="https://bootstrap-tagsinput.github.io/bootstrap-tagsinput/dist/bootstrap-tagsinput.min.js"></script>
+<script>
+  var data =
+  '[{ "value": 1, "text": "Task 1", "continent": "Task" }, { "value": 2, "text": "Task 2", "continent": "Task" }, { "value": 3, "text": "Task 3", "continent": "Task" }, { "value": 4, "text": "Task 4", "continent": "Task" }, { "value": 5, "text": "Task 5", "continent": "Task" }, { "value": 6, "text": "Task 6", "continent": "Task" } ]';
+
+//get data pass to json
+var task = new Bloodhound({
+  datumTokenizer: Bloodhound.tokenizers.obj.whitespace("text"),
+  queryTokenizer: Bloodhound.tokenizers.whitespace,
+  local: jQuery.parseJSON(data) //your can use json type
+});
+
+task.initialize();
+
+var elt = $("#tag1");
+elt.tagsinput({
+  itemValue: "value",
+  itemText: "text",
+  typeaheadjs: {
+    name: "task",
+    displayKey: "text",
+    source: task.ttAdapter()
+  }
+});
+
+//insert data to input in load page
+elt.tagsinput("add", {
+  value: 1,
+  text: "task 1",
+  continent: "task"
+});
+</script>
+{% endblock %}

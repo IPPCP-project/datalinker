@@ -8,68 +8,128 @@
     </div>
   </div>
   <hr>
-  <div class="row">
-    <form class="form" action="{{ url_for('.ds_delete', project_id=project_id, dataset_id=dataset_id) }}" method="POST">
-      <div class="col-sm-3">
-        <label>Raw dataset</label>
-        <p>Filename: <a class="action" href="{{ file_url }}">{{ dataset['filename'] }}</a>
-        </p>
+  <div id="accordion">
+    <div class="card">
+      <div class="card-header" id="headingOne">
+        <h5 class="mb-0">
+          <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+            <label>Raw dataset</label>
+          </button>
+        </h5>
       </div>
-      <div class=" col-sm-offset-8 col-sm-1">
-        <input class="btn btn-danger" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
+      <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+        <div class="card-body">
+          <div class="row">
+            <form class="form" action="{{ url_for('.ds_delete', project_id=project_id, dataset_id=dataset_id) }}" method="POST">
+              <div class="col-sm-3">
+                <p>Filename: <a class="action" href="{{url_for('.download', file_path=project_id+'/'+dataset_id+'/raw/'+dataset['filename'])}}">{{ dataset['filename'] }}</a>
+                </p>
+              </div>
+              <div class=" col-sm-offset-8 col-sm-1">
+                <input class="btn btn-danger" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
+              </div>
+            </form>
+          </div>
+          <div class="row">
+            <div class="col-sm-7" style="padding-left: 30px;">
+              <iframe src="{{ url_for('.ds_full_profile', dataset_id=dataset_id) }}" style="height:350px;width:1050px;zoom: 0.7;" title="Exploratory data analysis"></iframe>
+            </div>
+            <div class="col-sm-4">
+              <label for="title">Dataset title</label>
+              <p>{{ dataset['title'] }}</p>
+              <label for="description">Description</label>
+              <p>{{ dataset['description'] }}</p>
+              <label for="project_id">Dataset ID</label>
+              <p>{{ dataset_id }}</p>
+              <label for="creation_date">Creation date</label>
+              <p>{{ dataset['created'] }}</p>
+              <label for="project_uri">Dataset URI</label>
+              <p>{{ dataset['dataset_uri'] }}</p>  
+            </div>  
+          </div>
+        </div>
       </div>
-    </form>
+    </div>
+    <hr>
+    <div class="card">
+      <div class="card-header" id="headingTwo">
+        <h5 class="mb-0">
+          <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+            <label>Pre-processing</label>
+          </button>
+        </h5>
+      </div>
+      <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-sm-12" style="padding-left: 30px;">
+              <form class="form-horizontal" method="post" enctype="multipart/form-data">
+                <p>Preprocessing operations:
+                    {% if dataset['preproc_ops'] == None %}
+                    <input type='file' name='preproc_ops_file'> <input class="btn btn-secondary" type="submit" value="Load" formaction="{{url_for('.load_preproc_ops', dataset_id=dataset_id)}}">
+                    {% else %}
+                    <div class="col-sm-3">
+                      <div class="row">
+                        <input name="template" id="template" value="preprocessing" type="hidden">
+                        <a class="action" href="{{url_for('.download', file_path=project_id+'/'+dataset_id+'/preprocessing/'+dataset['preproc_ops_filename'])}}">{{ dataset['preproc_ops_filename'] }}</a>
+                      </div>
+                      <br>
+                      <div class="row">
+                        <input class="btn btn-secondary" type="submit" value="Generate DAG" formaction="{{url_for('.generate_dag', template='preprocessing', dataset_id=dataset_id)}}" formmethod="post">  
+                        <input class="btn btn-secondary" type="submit" value="Trigger DAG" formaction="{{url_for('.trigger_dag', dataset_id=dataset_id)}}" formmethod="post">    
+                      </div>
+                    {% endif %}
+                </p>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <hr>
+    <div class="card">
+      <div class="card-header" id="headingThree">
+        <h5 class="mb-0">
+          <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+            <label>Mapping</label>
+          </button>
+        </h5>
+      </div>
+      <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordion">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-sm-12" style="padding-left: 30px;">
+              <form class="form-horizontal" method="post" enctype="multipart/form-data">
+                <p>RML mappings:
+                    {% if dataset['mappings'] == None %}
+                    <input type='file' name='mappings_file'> <input class="btn btn-secondary" type="submit" value="Load" formaction="{{url_for('.load_mappings', dataset_id=dataset_id)}}">
+                    {% else %}
+                    <div class="col-sm-3">
+                      <div class="row">
+                        <input name="template" id="template" value="mapping" type="hidden">
+                        <a class="action" href="{{url_for('.download', file_path=project_id+'/'+dataset_id+'/mappings/'+dataset['mappings_filename'])}}">{{ dataset['mappings_filename'] }}</a>  
+                      </div>
+                      <br>
+                      <div class="row">
+                        <input class="btn btn-secondary" type="submit" value="Generate DAG" formaction="{{url_for('.generate_dag', template='mapping',  dataset_id=dataset_id)}}" formmethod="post">  
+                        <input class="btn btn-secondary" type="submit" value="Trigger DAG" formaction="{{url_for('.trigger_dag', dataset_id=dataset_id)}}" formmethod="post">    
+                      </div>
+                    </div>
+                    <div class="col-sm-offset-2 col-sm-7" id="drawio-diagram">
+                    </div>
+                    {% endif %}
+                </p>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="row">
-    <div class="col-sm-7" style="padding-left: 30px;">
-      <iframe src="{{ url_for('.ds_full_profile', dataset_id=dataset_id) }}" style="height:350px;width:1050px;zoom: 0.7;" title="Exploratory data analysis"></iframe>
-    </div>
-    <div class="col-sm-4">
-      <label for="title">Dataset title</label>
-      <p>{{ dataset['title'] }}</p>
-      <label for="description">Description</label>
-      <p>{{ dataset['description'] }}</p>
-      <label for="project_id">Dataset ID</label>
-      <p>{{ dataset_id }}</p>
-      <label for="creation_date">Creation date</label>
-      <p>{{ dataset['created'] }}</p>
-      <label for="project_uri">Dataset URI</label>
-      <p>{{ dataset['dataset_uri'] }}</p>  
-    </div>  
-  </div>
+  
   <hr>
-  <div class="row">
-    <form class="form-horizontal" method="post" enctype="multipart/form-data">
-      <label>Pre-processing</label>
-      <p>Preprocessing operations:
-          {% if dataset['preproc_ops'] == None %}
-          <input type='file' name='preproc_ops_file'> <input type="submit" value="Load" formaction="{{url_for('.load_preproc_ops', dataset_id=dataset_id)}}">
-          {% else %}
-          <input name="template" id="template" value="preprocessing" type="hidden">
-          <a class="action" href="{{ preproc_file_url }}">{{ dataset['preproc_ops_filename'] }}</a>
-          <input type="submit" value="Generate DAG" formaction="{{url_for('.generate_dag', template='preprocessing', dataset_id=dataset_id)}}" formmethod="post">  
-          <input type="submit" value="Trigger DAG" formaction="{{url_for('.trigger_dag', dataset_id=dataset_id)}}" formmethod="post">  
-          {% endif %}
-      </p>
-    </form>
-  </div>
-  <hr>
-  <div class="row">
-    <form class="form-horizontal" method="post" enctype="multipart/form-data">
-      <label>Mapping</label>
-      <p>RML mappings:
-          {% if dataset['mappings'] == None %}
-          <input type='file' name='mappings_file'> <input type="submit" value="Load" formaction="{{url_for('.load_mappings', dataset_id=dataset_id)}}">
-          {% else %}
-          <input name="template" id="template" value="mapping" type="hidden">
-          <a class="action" href="{{ preproc_file_url }}">{{ dataset['mappings_filename'] }}</a>
-          <input type="submit" value="Generate DAG" formaction="{{url_for('.generate_dag', template='mapping',  dataset_id=dataset_id)}}" formmethod="post">  
-          <input type="submit" value="Trigger DAG" formaction="{{url_for('.trigger_dag', dataset_id=dataset_id)}}" formmethod="post">  
-          {% endif %}
-      </p>
-    </form>
-  </div>
+  
   <hr>
   <div class="row">
     <form class="form-horizontal" method="post" enctype="multipart/form-data">
@@ -80,7 +140,7 @@
           <input type='file' name='shapes_file'> <input type="submit" value="Load" formaction="{{url_for('.load_shapes', dataset_id=dataset_id)}}">
           {% else %}
           <input name="template" id="template" value="validation" type="hidden" >
-          <a class="action" href="{{ preproc_file_url }}">{{ dataset['shapes_filename'] }}</a>
+          <a class="action" href="{{url_for('.download', file_path=project_id+'/'+dataset_id+'/raw/'+dataset['filename'])}}">{{ dataset['shapes_filename'] }}</a>
           <input type="submit" value="Generate DAG" formaction="{{url_for('.generate_dag', template='validation', dataset_id=dataset_id)}}" formmethod="post">  
           <input type="submit" value="Trigger DAG" formaction="{{url_for('.trigger_dag', dataset_id=dataset_id)}}" formmethod="post">  
           {% endif %}
@@ -96,4 +156,80 @@
     </form>     
   
     <hr>
+
+    <script type="text/javascript" src="https://www.draw.io/js/viewer.min.js"></script>
+  
+
+  <script>
+      (function () {
+          // Escape HTML
+          const chatMap = {
+              "&": "&amp;",
+              "'": "&#x27;",
+              "`": "&#x60;",
+              '"': "&quot;",
+              "<": "&lt;",
+              ">": "&gt;",
+          };
+  
+          function replaceMatchedCharacters(match) {
+              return chatMap[match];
+          }
+  
+          function escapeHTML(string) {
+              if (typeof string !== "string") return string;
+              return string.replace(/[&'`"<>]/g, replaceMatchedCharacters);
+          }
+  
+          // Draw.io converter
+          function createMxGraphData(xml, idx = new Date().getTime()) {
+              return {
+                  editable: false,
+                  highlight: "#0000ff",
+                  nav: false,
+                  toolbar: null,
+                  edit: null,
+                  resize: true,
+                  lightbox: "open",
+                  xml,
+              };
+          }
+  
+          async function drawioConverterAsync(xml, idx) {
+              return new Promise((resolve) => {
+                  const mxGraphData = createMxGraphData(xml, idx);
+                  const json = JSON.stringify(mxGraphData);
+                  const mxGraphHTML = createMxGraphHTML(json);
+                  resolve(mxGraphHTML);
+              });
+          }
+  
+          function createMxGraphHTML(json) {
+              return `<div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph="${escapeHTML(json)}"></div>`;
+          }
+  
+          // Load Draw.io file
+          function loadDrawioFile(url) {
+              fetch(url)
+                  .then((response) => {
+                      return response.text();
+                  })
+                  .then((data) => {
+                      return drawioConverterAsync(data);
+                  })
+                  .then((content) => {
+                      const graphContainer = document.getElementById('drawio-diagram');
+                      graphContainer.innerHTML = content;
+                      window.GraphViewer.processElements();
+                  })
+                  .catch((err) => {
+                      console.error("Error loading draw.io file:", err);
+                  });
+          }
+  
+          // Initialize
+          loadDrawioFile("{{url_for('.download', file_path=project_id+'/'+dataset_id+'/mappings/'+dataset['mappings_filename'])}}");
+      })();
+  </script>
+  
 {% endblock %}  

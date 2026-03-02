@@ -7,6 +7,13 @@ def get_db():
     if 'db' not in g:
         g.db = Graph(store="SQLAlchemy", identifier="my_triplestore")
         g.db.open("sqlite:///rdf_store.db", create=True) 
+    if 'pf' not in g:
+        g.pf = """
+        PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+        PREFIX dl: <http://datalinker.io/ld/ontology#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX dcterms: <http://purl.org/dc/terms/
+        """
     return g.db
 
 def get_projects(id="?project_id"):
@@ -20,9 +27,9 @@ def get_projects(id="?project_id"):
     PREFIX dl: <http://datalinker.io/ld/ontology#>
     PREFIX dcterms: <http://purl.org/dc/terms/> 
     SELECT * WHERE{
-        ?project_uri a foaf:Project;
+        ?project_uri a dl:Project;
             rdfs:label ?title;
-            rdfs:comment ?description;
+            dl:useCaseDefinition ?use_case;
             dcterms:created ?created;
             dcterms:identifier %s.
             OPTIONAL {
@@ -40,6 +47,38 @@ def get_projects(id="?project_id"):
 
     return projects
 
+def get_data_sources(id):
+    id = f'"{id}"'
+    db = get_db()    
+    # Query using SPARQL
+    query = """
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX dl: <http://datalinker.io/ld/ontology#>
+    PREFIX dcterms: <http://purl.org/dc/terms/> 
+    SELECT * WHERE{
+        ?project_uri a dl:Project;
+            dcterms:identifier %s;
+            dl:dataSource ?data_source.
+    }""" % (id)
+    data_sources = db.query(query)
+    return data_sources
+
+
+def get_data_requirements(id):
+    id = f'"{id}"'
+    db = get_db()    
+    # Query using SPARQL
+    query = """
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX dl: <http://datalinker.io/ld/ontology#>
+    PREFIX dcterms: <http://purl.org/dc/terms/> 
+    SELECT * WHERE{
+        ?project_uri a dl:Project;
+            dcterms:identifier %s;
+            dl:dataRequirement ?data_requirement.
+    }""" % (id)
+    data_requirements = db.query(query)
+    return data_requirements
 
 def get_datasets(pj_id="?project_id", id="?dataset_id"):
     db = get_db()
@@ -57,7 +96,7 @@ def get_datasets(pj_id="?project_id", id="?dataset_id"):
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
     SELECT DISTINCT * WHERE {
-        ?project_uri a foaf:Project;
+        ?project_uri a dl:Project;
             dcterms:identifier %s;
             dcat:dataset ?dataset_uri.            
         ?dataset_uri a dcat:Dataset;
