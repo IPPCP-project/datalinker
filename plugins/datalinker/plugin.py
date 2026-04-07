@@ -884,6 +884,62 @@ class LD(AppBuilderBaseView):
         return redirect(url_for('.ds_config',dataset_id=dataset_id))
 
 
+    @expose('/resources/Project/<project_id>/load-ssot', methods=('GET', 'POST'))
+    @csrf.exempt
+    def load_ssot(self, project_id):
+        project = get_projects(project_id)
+        if request.method == 'POST':
+            error = None
+            if 'ssot_file' not in request.files:
+                error = "No file part"
+            file = request.files['ssot_file']
+            if file.filename == '':
+                error = "No selected file"
+            if file and not allowed_file(file.filename, extensions_dict={'ttl', 'drawio'}):
+                error = "File with not allowed extension. ttl or drawio file expected."
+            if error is not None:
+                flash(error)
+            else:
+                try:
+                    ssot_id = project_id + "_ssot"
+                    db = get_db()
+                    update = """
+                    PREFIX dl: <http://datalinker.io/ld/ontology#>
+                    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                    PREFIX dcterms: <http://purl.org/dc/terms/>
+                    PREFIX dcat: <http://www.w3.org/ns/dcat#>
+                    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+                    INSERT {
+                    <%s> dl:ssot
+                                <http://datalinker.io/ld/resources/SSOT/%s>.
+                    <http://datalinker.io/ld/resources/SSOT/%s> a dl:SSOT;
+                        dcterms:created ?created;
+                        dcterms:identifier "%s";
+                        dl:filename "%s".
+                    } 
+                    WHERE {
+                        BIND(NOW() as ?created)
+                    }""" % ( project['project_uri'], ssot_id, ssot_id, ssot_id, file.filename)
+                    db.update(update)
+                    db.commit()
+                    db.close()
+
+                    # Set upload folder
+                    upload_folder = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/ssot/")
+                    os.makedirs(upload_folder, exist_ok=True)
+
+                    filename = secure_filename(file.filename)
+                    # Copy raw data in the dataset folder
+                    file.save(os.path.join(upload_folder, filename))
+                    flash("SSOT file loaded.")
+                except Exception as e:
+                    error = e
+                    flash(error)
+        return redirect(url_for('.ds_index',project_id=project_id))
+
+
+
 # Creating a flask blueprint to integrate the templates and static folder
 bp = Blueprint(
     "dl_plugin",

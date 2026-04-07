@@ -23,6 +23,9 @@
     <a href="#datasets" aria-controls="profile" role="tab" data-toggle="tab">Datasets</a>
   </li>
   <li role="presentation">
+    <a href="#ssot" aria-controls="messages" role="tab" data-toggle="tab">SSOT</a>
+  </li>  
+  <li role="presentation">
     <a href="#ontology" aria-controls="messages" role="tab" data-toggle="tab">Ontology</a>
   </li>
   <li role="presentation">
@@ -100,6 +103,7 @@
   <hr>
   {% endfor %}
   </div>
+  
   <div role="tabpanel" class="tab-pane fade active" id="ontology">
     <br>
     <label for="ontological_requirements">Ontological requirements</label>
@@ -193,6 +197,100 @@
 
             // Initialize
             loadDrawioFile("{{url_for('.download', file_path=project_id+'/ontology/'+project['ontology_filename'])}}");
+        })();
+      </script>  
+      {% endif %}
+
+      <hr>
+    </form>
+    </div>
+  <div role="tabpanel" class="tab-pane fade active" id="ssot">
+    <br>
+    <form method="post" enctype="multipart/form-data" role="form">
+      <div class="form-group">
+        <label class="control-label" for="conceptualisation">Single source of truth</label>
+        <p>Transformation operations + mappings + ontology + validation shapes. All in a single place.</p>
+      {% if project['ontology_uri'] == None %}
+        <input class="form-control-file" type='file' name='ssot_file' required>
+      </div>
+      <input class="btn btn-primary" type="submit" value="Load" formaction="{{url_for('.load_ssot', project_id=project_id)}}" formmethod="post">
+      {% else %}
+      <input class="form-control" name="template" id="template" value="ontology" type="hidden">
+      <p><a class="action" href="{{url_for('.download', file_path=project_id+'/ssot/'+project['ontology_filename'])}}">{{ project['ontology_filename'] }}</a></p>
+      </div>
+      <input class="btn btn-primary" type="submit" value="Validate with OOPS" formaction="{{url_for('.pj_index')}}" formmethod="post">
+      <input class="btn btn-primary" type="submit" value="Generate Astrea Shapes" formaction="{{url_for('.pj_index')}}" formmethod="post">
+      <div id="drawio-diagram"></div>
+      <script type="text/javascript" src="https://www.draw.io/js/viewer.min.js"></script>
+
+      <script>
+        (function () {
+            // Escape HTML
+            const chatMap = {
+                "&": "&amp;",
+                "'": "&#x27;",
+                "`": "&#x60;",
+                '"': "&quot;",
+                "<": "&lt;",
+                ">": "&gt;",
+            };
+
+            function replaceMatchedCharacters(match) {
+                return chatMap[match];
+            }
+
+            function escapeHTML(string) {
+                if (typeof string !== "string") return string;
+                return string.replace(/[&'`"<>]/g, replaceMatchedCharacters);
+            }
+
+            // Draw.io converter
+            function createMxGraphData(xml, idx = new Date().getTime()) {
+                return {
+                    editable: false,
+                    highlight: "#0000ff",
+                    nav: false,
+                    toolbar: null,
+                    edit: null,
+                    resize: true,
+                    lightbox: "open",
+                    xml,
+                };
+            }
+
+            async function drawioConverterAsync(xml, idx) {
+                return new Promise((resolve) => {
+                    const mxGraphData = createMxGraphData(xml, idx);
+                    const json = JSON.stringify(mxGraphData);
+                    const mxGraphHTML = createMxGraphHTML(json);
+                    resolve(mxGraphHTML);
+                });
+            }
+
+            function createMxGraphHTML(json) {
+                return `<div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph="${escapeHTML(json)}"></div>`;
+            }
+
+            // Load Draw.io file
+            function loadDrawioFile(url) {
+                fetch(url)
+                    .then((response) => {
+                        return response.text();
+                    })
+                    .then((data) => {
+                        return drawioConverterAsync(data);
+                    })
+                    .then((content) => {
+                        const graphContainer = document.getElementById('drawio-diagram');
+                        graphContainer.innerHTML = content;
+                        window.GraphViewer.processElements();
+                    })
+                    .catch((err) => {
+                        console.error("Error loading draw.io file:", err);
+                    });
+            }
+
+            // Initialize
         })();
       </script>  
       {% endif %}
