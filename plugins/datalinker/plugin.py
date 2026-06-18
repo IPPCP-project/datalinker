@@ -3,8 +3,8 @@ from airflow.plugins_manager import AirflowPlugin
 from flask import Blueprint, flash, request, redirect, url_for, send_file, g
 from flask_appbuilder import BaseView as AppBuilderBaseView
 from flask_appbuilder import expose
-from datalinker.dag import generate, generate_one, trigger, unpause, parse_dags
-from datalinker.db import get_db, get_projects, get_datasets, get_data_sources, get_data_requirements
+from datalinker.dag import generate, generate_one, generate_ssot, diagram_to_rdf, materialisation, validation, trigger, unpause, parse_dags
+from datalinker.db import get_db, get_projects, get_datasets, get_data_sources, get_data_requirements, get_ssots
 from datalinker.utils import allowed_file
 from datalinker.profile import compact_profile, get_variables
 from airflow.www.app import csrf
@@ -184,6 +184,7 @@ class LD(AppBuilderBaseView):
         datasets = get_datasets(pj_id=project_id)
         data_sources = get_data_sources(project_id)
         data_requirements = get_data_requirements(project_id)
+        ssot = get_ssots(pj_id=project_id)
 
         if request.method == 'POST': 
             try:
@@ -193,7 +194,7 @@ class LD(AppBuilderBaseView):
                 error = e
                 flash(error)
             return redirect(url_for("Airflow.index"))
-        return self.render_template("/datasets/index.html", project=project, project_id=project_id, datasets=datasets, data_requirements=data_requirements, data_sources=data_sources )
+        return self.render_template("/datasets/index.html", project=project, project_id=project_id, datasets=datasets, data_requirements=data_requirements, data_sources=data_sources, ssot=ssot )
 
 
     @expose('/resources/Dataset/<dataset_id>/profile', methods=('GET', 'POST'))
@@ -895,8 +896,8 @@ class LD(AppBuilderBaseView):
             file = request.files['ssot_file']
             if file.filename == '':
                 error = "No selected file"
-            if file and not allowed_file(file.filename, extensions_dict={'ttl', 'drawio'}):
-                error = "File with not allowed extension. ttl or drawio file expected."
+            if file and not allowed_file(file.filename, extensions_dict={'drawio'}):
+                error = "File with not allowed extension. drawio file expected."
             if error is not None:
                 flash(error)
             else:
@@ -912,8 +913,8 @@ class LD(AppBuilderBaseView):
 
                     INSERT {
                     <%s> dl:ssot
-                                <http://datalinker.io/ld/resources/SSOT/%s>.
-                    <http://datalinker.io/ld/resources/SSOT/%s> a dl:SSOT;
+                                <http://datalinker.io/ld/resources/SSoT/%s>.
+                    <http://datalinker.io/ld/resources/SSoT/%s> a dl:SSoT;
                         dcterms:created ?created;
                         dcterms:identifier "%s";
                         dl:filename "%s".
@@ -932,12 +933,139 @@ class LD(AppBuilderBaseView):
                     filename = secure_filename(file.filename)
                     # Copy raw data in the dataset folder
                     file.save(os.path.join(upload_folder, filename))
-                    flash("SSOT file loaded.")
+                    flash("SSoT file loaded.")
+
                 except Exception as e:
                     error = e
                     flash(error)
         return redirect(url_for('.ds_index',project_id=project_id))
 
+    @expose("/resources/SSoT/<ssot_id>/diagram-to-rdf", methods=["GET", "POST"])
+    @csrf.exempt
+    def diagram_to_rdf_dag(self, ssot_id):
+        ssot = get_ssots(id=ssot_id)
+        project_id = ssot['project_id']
+        if request.method == 'POST': 
+            try:
+                diagram_to_rdf(ssot_id)
+                flash(f"Diagram to RDF DAG generated")
+
+            except Exception as e:
+                file_url = None
+                error = e
+                flash(error)
+            # return redirect(url_for("Airflow.ds_index"))
+        # return self.render_template("/datasets/index.html", datasets=datasets )
+        return redirect(url_for('.ds_index',project_id=project_id))
+
+
+    @expose("/resources/SSoT/<ssot_id>/materialisation", methods=["GET", "POST"])
+    @csrf.exempt
+    def materialisation_dag(self, ssot_id):
+        ssot = get_ssots(id=ssot_id)
+        project_id = ssot['project_id']
+        if request.method == 'POST': 
+            try:
+                materialisation(ssot_id)
+                flash(f"Materialisation DAG generated")
+
+            except Exception as e:
+                file_url = None
+                error = e
+                flash(error)
+            # return redirect(url_for("Airflow.ds_index"))
+        # return self.render_template("/datasets/index.html", datasets=datasets )
+        return redirect(url_for('.ds_index',project_id=project_id))
+
+
+    @expose("/resources/SSoT/<ssot_id>/validation", methods=["GET", "POST"])
+    @csrf.exempt
+    def validation_dag(self, ssot_id):
+        ssot = get_ssots(id=ssot_id)
+        project_id = ssot['project_id']
+        if request.method == 'POST': 
+            try:
+                validation(ssot_id)
+                flash(f"Validation DAG generated")
+
+            except Exception as e:
+                file_url = None
+                error = e
+                flash(error)
+            # return redirect(url_for("Airflow.ds_index"))
+        # return self.render_template("/datasets/index.html", datasets=datasets )
+        return redirect(url_for('.ds_index',project_id=project_id))
+
+
+    @expose("/resources/SSoT/<ssot_id>/generate-dags", methods=["GET", "POST"])
+    @csrf.exempt
+    def generate_ssot_dag(self, ssot_id):
+        ssot = get_ssots(id=ssot_id)
+        project_id = ssot['project_id']
+        flash(project_id)
+        # project = get_projects(project_id)
+        if request.method == 'POST': 
+            try:
+                generate_ssot(ssot_id)
+                flash(f"SSoT DAGs generated")
+
+            except Exception as e:
+                file_url = None
+                error = e
+                flash(error)
+            # return redirect(url_for("Airflow.ds_index"))
+        # return self.render_template("/datasets/index.html", datasets=datasets )
+        return redirect(url_for('.ds_index',project_id=project_id))
+
+
+    @expose("/resources/SSoT/<ssot_id>/trigger-dag", methods=["GET", "POST"])
+    @csrf.exempt
+    def trigger_ssot_dag(self, dataset_id):
+        dataset = get_datasets(id=dataset_id)
+        project_id = dataset['project_id']
+        project = get_projects(project_id)
+        dag_id = dataset_id + "_preprocessing"
+        refined_data_folder = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/{dataset_id}/refined/")
+
+        if request.method == 'POST': 
+            try:
+                shutil.rmtree(refined_data_folder)
+                os.makedirs(refined_data_folder, exist_ok=True)
+
+                trigger(dag_id)
+                flash("Pre-processing DAG triggered")
+
+            except Exception as e:
+                file_url = None
+                error = e
+                flash(error)
+        return redirect(url_for('.ds_config',dataset_id=dataset_id))
+
+    @expose('/resources/SSoT/<ssot_id>/delete', methods=('POST',))
+    @csrf.exempt
+    def ssot_delete(self, ssot_id):
+        ssot = get_ssots(id=ssot_id)
+        project_id = ssot['project_id']
+        project = get_projects(project_id)
+        if request.method == 'POST':
+            try:
+                db = get_db()
+                delete = """
+                    DELETE WHERE {
+                        <%s> ?property ?value.
+                    }""" % (ssot['ssot_uri'])
+                db.update(delete)
+                db.commit()
+                db.close()
+
+                ssot_folder = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/ssot/")
+
+                shutil.rmtree(ssot_folder, ignore_errors=True)
+
+            except Exception as e:
+                error = e
+                flash(error)
+            return redirect(url_for('.ds_index', project_id=project_id))
 
 
 # Creating a flask blueprint to integrate the templates and static folder

@@ -1,0 +1,58 @@
+import os
+from airflow import DAG, Dataset
+from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
+from airflow.providers.docker.operators.docker import DockerOperator
+from datetime import datetime, timedelta
+from airflow import configuration as conf
+from docker.types import Mount
+
+{{ ssot_id }}_ssot_rdf = Dataset("dl://{{ ssot_id }}/ssot-rdf")
+
+{{ ssot_id }}_rdf_asserted = Dataset("dl://{{ ssot_id }}/rdf-asserted")
+{{ ssot_id }}_rdf_asserted_inferred = Dataset("dl://{{ ssot_id }}/rdf-asserted-inferred")
+{{ ssot_id }}_report = Dataset("dl://{{ ssot_id }}/report")
+
+with DAG(
+    dag_id="{{ ssot_id }}_ssot", 
+    description="LD mapping, materialisation of asserted data DAG for '{{ ssot_id }}' Single Source of Truth diagram",
+    start_date=datetime(year=2026, month=4, day=13) , 
+    catchup=False,
+    schedule=[{{ ssot_id }}_ssot_rdf] ,
+    default_args={
+        'owner': 'admin',
+        'retries': 5,
+        'retry_delay': timedelta(seconds=5)
+    }
+    ) as dag:
+
+    mapping_config = BashOperator(
+        cwd = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}"),
+        task_id='mapping_config',
+        bash_command="echo [CONFIGURATION]>ssot/config.ini; \
+                      echo output_file = rdf/{{ project_id }}-output.nq>>ssot/config.ini; \
+                      echo number_of_processes=1 >>ssot/config.ini; \
+                      echo output_format=N-QUADS >>ssot/config.ini; \
+                      echo udfs=udfs.py >>ssot/config.ini; \
+                      echo [SSoT]>>ssot/config.ini; \
+                      echo mappings=ssot/{{ ssot_filename }}.ttl>>ssot/config.ini; \
+                      ",
+        )
+
+    materialisation = DockerOperator(
+        docker_url="unix://var/run/docker.sock",  # replace it with swarm/docker endpoint tcp://localhost:2375
+        image="morph-kgc:latest",
+        auto_remove="force",
+        network_mode="bridge",
+        outlets = [{{ ssot_id }}_rdf_asserted],
+        mounts=[
+            Mount(source=os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}"), target="/app/files/", type="bind"),
+        ], 
+        task_id="materialisation",
+        # do_xcom_push=True,
+        command="/app/files/mappings/config.ini",
+        dag=dag,
+    )
+    mapping_config >> materialisation
+
+# docker run -v $(pwd)/plugins/datalinker/data/dl/:/app/files --rm morph-kgc:latest /app/files/mappings/config.ini

@@ -7,15 +7,18 @@ from datetime import datetime, timedelta
 from airflow import configuration as conf
 from docker.types import Mount
 
-{{ dataset_id }}_rdf = Dataset("dl://{{ dataset_id }}/rdf")
-{{ dataset_id }}_report = Dataset("dl://{{ dataset_id }}/report")
+{{ ssot_id }}_ssot_rdf = Dataset("dl://{{ ssot_id }}/ssot-rdf")
+
+{{ ssot_id }}_rdf_asserted = Dataset("dl://{{ ssot_id }}/rdf-asserted")
+{{ ssot_id }}_rdf_asserted_inferred = Dataset("dl://{{ ssot_id }}/rdf-asserted-inferred")
+{{ ssot_id }}_report = Dataset("dl://{{ ssot_id }}/report")
 
 with DAG(
-    dag_id="{{ dataset_id }}_validation", 
-    description="LD validation DAG for '{{ dataset_id }}' dataset",
+    dag_id="{{ ssot_id }}_validation", 
+    description="RDF validation DAG for '{{ ssot_id }}' Single Source of Truth diagram",
     start_date=datetime(year=2025, month=2, day=1) , 
     catchup=False,
-    schedule=[{{ dataset_id }}_rdf] ,
+    schedule=[{{ ssot_id }}_ssot_rdf] ,
     default_args={
         'owner': 'admin',
         'retries': 5,
@@ -25,22 +28,25 @@ with DAG(
 
     validation = DockerOperator(
         docker_url="unix://var/run/docker.sock",  # replace it with swarm/docker endpoint tcp://localhost:2375
-        image="cli_data_validator:latest",
+        image="ashleysommer/pyshacl:latest",
         auto_remove="force",
         network_mode="bridge",
-        outlets = [{{ dataset_id }}_report],
+        outlets = [{{ ssot_id }}_report],
         mounts=[
-            Mount(source=os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}/{{ dataset_id }}"), target="/cli-data-validator/data", type="bind"),
+            Mount(source=os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}"), target="/data", type="bind"),
         ], 
         task_id="validation",
         # do_xcom_push=True,
         command=[
-            "/cli-data-validator/data/rdf/{{ filename }}-output.nq",
-            "/cli-data-validator/data/shapes/{{ shapes_filename }}",
-            "/cli-data-validator/data/report/{{ filename }}-report.ttl"
+            "poetry", "run", "pyshacl", "-s",
+            "/data/ssot/{{ ssot_filename.split('.')[0] }}.ttl",
+            "/data/rdf/{{ project_id }}-asserted.nt",
+            #"-o", "/data/rdf/{{ project_id }}-report.ttl",
+            "-f", "turtle"
             ],
         dag=dag,
     )
     validation
 
 # docker run -v $(pwd)/data:/cli-data-validator/data --rm cli_data_validator:latest /cli-data-validator/data/test_data.ttl /cli-data-validator/data/test_shapes.ttl /cli-data-validator/data/test_report.ttl
+# docker run --rm -i -t --mount type=bind,src=`echo $(pwd)/data`,dst=/data ashleysommer/pyshacl poetry run pyshacl -s /data/test_shapes.ttl /data/test_data.ttl -o /data/report.ttl -f turtle

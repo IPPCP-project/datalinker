@@ -37,6 +37,11 @@ def get_projects(id="?project_id"):
             ?ontology_uri dl:filename ?ontology_filename;
                         dcterms:identifier ?ontology_id.
             }
+            OPTIONAL {
+            ?project_uri dl:ssot ?ssot_uri.
+            ?ssot_uri dl:filename ?ssot_filename;
+                dcterms:identifier ?ssot_id.            
+            }
     }""" % (id)
     projects = db.query(query)
     # For a specific results the "projects" is a single output instead of a set
@@ -128,6 +133,38 @@ def get_datasets(pj_id="?project_id", id="?dataset_id"):
             datasets = dataset
 
     return datasets
+
+def get_ssots(pj_id="?project_id", id="?ssot_id"):
+    db = get_db()
+    # Convert to pass a string argument
+    if pj_id != "?project_id":
+        pj_id = f'"{pj_id}"'
+    if id != "?ssot_id":
+        id = f'"{id}"'
+    # Query using SPARQL
+    query = """
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX dl: <http://datalinker.io/ld/ontology#>
+    PREFIX dcterms: <http://purl.org/dc/terms/> 
+    PREFIX dcat: <http://www.w3.org/ns/dcat#>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+    SELECT DISTINCT * WHERE {
+        ?project_uri a dl:Project;
+            dcterms:identifier %s.
+        OPTIONAL {
+            ?project_uri dl:ssot ?ssot_uri.
+            ?ssot_uri dl:filename ?ssot_filename;
+                        dcterms:identifier %s.
+            }
+    }"""% (pj_id, id) 
+    ssots = db.query(query)
+    # For a specific results the "ssots" is a single output instead of a set
+    if id != "?ssot_id":
+        for ssot in ssots:
+            ssots = ssot
+    return ssots
+
 
 ### SQLITE3 DB
 # def get_db():
