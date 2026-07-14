@@ -3,7 +3,7 @@ from airflow.plugins_manager import AirflowPlugin
 from flask import Blueprint, flash, request, redirect, url_for, send_file, g
 from flask_appbuilder import BaseView as AppBuilderBaseView
 from flask_appbuilder import expose
-from datalinker.dag import generate, generate_one, generate_ssot, diagram_to_rdf, materialisation, validation, trigger, unpause, parse_dags
+from datalinker.dag import generate, generate_one, generate_ssot, diagram_to_rdf, materialisation, validation, create_endpoint, trigger, unpause, parse_dags
 from datalinker.db import get_db, get_projects, get_datasets, get_data_sources, get_data_requirements, get_ssots
 from datalinker.utils import allowed_file
 from datalinker.profile import compact_profile, get_variables
@@ -997,17 +997,14 @@ class LD(AppBuilderBaseView):
         return redirect(url_for('.ds_index',project_id=project_id))
 
 
-    @expose("/resources/SSoT/<ssot_id>/generate-dags", methods=["GET", "POST"])
+    @expose("/resources/Project/<project_id>/create-endpoint", methods=["GET", "POST"])
     @csrf.exempt
-    def generate_ssot_dag(self, ssot_id):
-        ssot = get_ssots(id=ssot_id)
-        project_id = ssot['project_id']
-        flash(project_id)
-        # project = get_projects(project_id)
+    def create_endpoint_dag(self, project_id):
+        ssot_id = project_id + "_ssot"
         if request.method == 'POST': 
             try:
-                generate_ssot(ssot_id)
-                flash(f"SSoT DAGs generated")
+                create_endpoint(project_id)
+                flash(f"SPARQL endpoint creation DAG generated")
 
             except Exception as e:
                 file_url = None
@@ -1018,28 +1015,32 @@ class LD(AppBuilderBaseView):
         return redirect(url_for('.ds_index',project_id=project_id))
 
 
-    @expose("/resources/SSoT/<ssot_id>/trigger-dag", methods=["GET", "POST"])
-    @csrf.exempt
-    def trigger_ssot_dag(self, dataset_id):
-        dataset = get_datasets(id=dataset_id)
-        project_id = dataset['project_id']
-        project = get_projects(project_id)
-        dag_id = dataset_id + "_preprocessing"
-        refined_data_folder = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{project_id}/{dataset_id}/refined/")
 
+    @expose("/resources/SSoT/<ssot_id>/generate-run-dags", methods=["GET", "POST"])
+    @csrf.exempt
+    def generate_run_ssot_dags(self, ssot_id):
+        ssot = get_ssots(id=ssot_id)
+        project_id = ssot['project_id']
+        # flash(project_id)
+        # project = get_projects(project_id)
         if request.method == 'POST': 
             try:
-                shutil.rmtree(refined_data_folder)
-                os.makedirs(refined_data_folder, exist_ok=True)
+                generate_ssot(ssot_id)
+                unpause(dag_id=ssot_id + "_diagram_to_rdf")
+                unpause(dag_id=ssot_id + "_materialisation")
+                unpause(dag_id=ssot_id + "_validation")
+                trigger(dag_id=ssot_id + "_diagram_to_rdf")
 
-                trigger(dag_id)
-                flash("Pre-processing DAG triggered")
+                flash(f"SSoT DAGs generated and active")
 
             except Exception as e:
                 file_url = None
                 error = e
                 flash(error)
-        return redirect(url_for('.ds_config',dataset_id=dataset_id))
+            # return redirect(url_for("Airflow.ds_index"))
+        # return self.render_template("/datasets/index.html", datasets=datasets )
+        return redirect(url_for('.ds_index',project_id=project_id))
+
 
     @expose('/resources/SSoT/<ssot_id>/delete', methods=('POST',))
     @csrf.exempt

@@ -1,0 +1,49 @@
+import os
+from airflow import DAG, Dataset
+from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
+from airflow.providers.docker.operators.docker import DockerOperator
+from datetime import datetime, timedelta
+from airflow import configuration as conf
+from docker.types import Mount
+
+{{ ssot_id }}_ssot_rdf = Dataset("dl://{{ ssot_id }}/ssot-rdf")
+
+{{ ssot_id }}_rdf_asserted = Dataset("dl://{{ ssot_id }}/rdf-asserted")
+{{ ssot_id }}_rdf_asserted_inferred = Dataset("dl://{{ ssot_id }}/rdf-asserted-inferred")
+{{ ssot_id }}_report = Dataset("dl://{{ ssot_id }}/report")
+
+with DAG(
+    dag_id="{{ ssot_id }}_create_endpoint", 
+    description="SPARQL endpoint creation DAG for '{{ project_id }}' knowledge graph",
+    start_date=datetime(year=2025, month=2, day=1) , 
+    catchup=False,
+    schedule=[{{ ssot_id }}_rdf_asserted] ,
+    tags=["{{ project_id }}", "datalinker", "create_endpoint"],
+    default_args={
+        'owner': 'admin',
+        'retries': 5,
+        'retry_delay': timedelta(seconds=5)
+    }
+    ) as dag:
+
+    create_endpoint = BashOperator(
+    cwd = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}/rdf"),
+    task_id="create_endpoint",
+    bash_command="docker run --rm -d -v $PWD/data:/data -p 7878:7878 oxigraph/oxigraph serve --location /data/db --bind 0.0.0.0:7878",
+    dag=dag,
+    )
+
+    clear_db = BashOperator(
+    cwd = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}/rdf"),
+    task_id='clear_db',
+    bash_command="curl -X POST -H 'Content-Type: application/sparql-update' --data 'DELETE WHERE { ?s ?p ?o }' http://localhost:7878/update",
+    )
+
+    post_data = BashOperator(
+    cwd = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}/rdf"),
+    task_id='post_data',
+    bash_command="curl http://localhost:7878/store?default -H 'Content-Type: text/turtle' -T ./{{ project_id }}-asserted.nt",
+    )
+
+    create_endpoint >>  clear_db >> post_data

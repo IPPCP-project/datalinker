@@ -81,18 +81,36 @@ def validation(ssot_id):
     parse_dags()
 
 
-def generate_ssot(ssot_id):
-    ssot = get_ssots(id=ssot_id)
+def create_endpoint(project_id):
+    ssot_id = project_id + "_ssot"
     plugin_dir = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/")
     env = Environment(loader=FileSystemLoader(plugin_dir))
-    template_obj = env.get_template(f'dag_templates/ssot.jinja2')
-    
-    inputs = { 'ssot_id': ssot_id,
-               'project_id' : ssot['project_id'],
-               'ssot_filename': ssot['ssot_filename'] }
+    template_obj = env.get_template(f'dag_templates/create_endpoint.jinja2')
 
-    with open(f"dags/{ssot_id}_ssot.py", "w") as f:
+    inputs = { 'ssot_id': ssot_id,
+               'project_id': project_id }
+
+    with open(f"dags/{project_id}_create_endpoint.py", "w") as f:
         f.write(template_obj.render(inputs))
+
+    parse_dags()
+
+
+def generate_ssot(ssot_id):
+    diagram_to_rdf(ssot_id)
+    materialisation(ssot_id)
+    validation(ssot_id)
+    # ssot = get_ssots(id=ssot_id)
+    # plugin_dir = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/")
+    # env = Environment(loader=FileSystemLoader(plugin_dir))
+    # template_obj = env.get_template(f'dag_templates/ssot.jinja2')
+    
+    # inputs = { 'ssot_id': ssot_id,
+    #            'project_id' : ssot['project_id'],
+    #            'ssot_filename': ssot['ssot_filename'] }
+
+    # with open(f"dags/{ssot_id}_ssot.py", "w") as f:
+    #     f.write(template_obj.render(inputs))
     
     parse_dags()
 

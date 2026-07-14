@@ -26,7 +26,7 @@
     <a href="#ssot" aria-controls="messages" role="tab" data-toggle="tab">SSoT</a>
   </li>
   <li role="presentation">
-    <a href="#verification" aria-controls="home" role="tab" data-toggle="tab">Endpoint (SPARQL)</a>
+    <a href="#endpoint" aria-controls="home" role="tab" data-toggle="tab">Endpoint (SPARQL)</a>
   </li>
 </ul>
 <div class="tab-content">
@@ -113,13 +113,10 @@
       <input class="form-control" name="template" id="template" value="ssot" type="hidden">
       <p> &emsp; <a class="action" href="{{url_for('.download', file_path=project_id+'/ssot/'+project['ssot_filename'])}}">{{ project['ssot_filename'] }}</a> &emsp; <input class="btn btn-danger btn-sm" type="submit" value="x" formaction="{{url_for('.ssot_delete', ssot_id=project['ssot_id'])}}" formmethod="post" onclick="return confirm('Are you sure?');"></p>
       </div>
-      <input class="btn btn-secondary" type="submit" value="Generate Diagram to RDF DAG" formaction="{{url_for('.diagram_to_rdf_dag', ssot_id=project['ssot_id'])}}" formmethod="post">  
+      <!-- <input class="btn btn-secondary" type="submit" value="Generate Diagram to RDF DAG" formaction="{{url_for('.diagram_to_rdf_dag', ssot_id=project['ssot_id'])}}" formmethod="post">  
       <input class="btn btn-secondary" type="submit" value="Generate Materialisation DAG" formaction="{{url_for('.materialisation_dag', ssot_id=project['ssot_id'])}}" formmethod="post">  
-      <input class="btn btn-secondary" type="submit" value="Generate Validation DAG" formaction="{{url_for('.validation_dag', ssot_id=project['ssot_id'])}}" formmethod="post">  
-      <input class="btn btn-secondary" type="submit" value="Generate DAGs" formaction="{{url_for('.generate_ssot_dag', ssot_id=project['ssot_id'])}}" formmethod="post">  
-      <input class="btn btn-secondary" type="submit" value="Trigger DAG" formaction="{{url_for('.trigger_ssot_dag', ssot_id=project['ssot_id'])}}" formmethod="post">    
-      <input class="btn btn-primary" type="submit" value="Construct and validate knowledge graph" formaction="{{url_for('.pj_index')}}"
-       formmethod="post">
+      <input class="btn btn-secondary" type="submit" value="Generate Validation DAG" formaction="{{url_for('.validation_dag', ssot_id=project['ssot_id'])}}" formmethod="post">   -->
+      <input class="btn btn-secondary" type="submit" value="Construct and validate knowledge graph" formaction="{{url_for('.generate_run_ssot_dags', ssot_id=project['ssot_id'])}}" formmethod="post">  
       <div id="drawio-diagram"></div>
       <script type="text/javascript" src="https://www.draw.io/js/viewer.min.js"></script>
 
@@ -199,8 +196,17 @@
       <hr>
     </form>
     </div>
-  
-
+  <div role="tabpanel" class="tab-pane fade active" id="endpoint">
+    <form method="post" enctype="multipart/form-data" role="form">
+      <input class="btn btn-primary" type="submit" value="Enable SPARQL endpoint" formaction="{{url_for('.create_endpoint_dag', project_id=project_id)}}"
+       formmethod="post">
+    </form>
+    <a href="{{url_for('.download', file_path=project_id+'/rdf/'+project_id+'-asserted.nt')}}" class="metadata-link btn btn-primary">
+              <i class="fa fa-download" aria-hidden="true"></i> Download complete Knowledge Graph (NT format)
+    </a>
+    <br>
+    <iframe src="http://localhost:7878" style="height:1000px;width:1000px;border:none;" title="SPARQL endpoint"></iframe>
+  </div>
   <form action="{{ url_for('.pj_index') }}" method="get">
     <input type="submit" value="Back to projects" >
   </form>
