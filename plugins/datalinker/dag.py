@@ -1,6 +1,6 @@
 from jinja2 import Environment, FileSystemLoader
 from airflow import configuration as conf
-from datalinker.db import get_datasets
+from datalinker.db import get_datasets, get_ssots
 import yaml
 import os, subprocess
 
@@ -18,13 +18,14 @@ def generate():
                     f.write(template.render(inputs))
 
 def generate_one(template, dataset_id):
-    dataset = get_datasets(dataset_id)
+    dataset = get_datasets(id=dataset_id)
     plugin_dir = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/")
     env = Environment(loader=FileSystemLoader(plugin_dir))
     template_obj = env.get_template(f'dag_templates/{template}.jinja2')
     
-    inputs = { 'id': dataset_id,
-               'filename': dataset['filename'].split(".")[0],
+    inputs = { 'dataset_id': dataset_id,
+               'project_id' : dataset['project_id'],
+               'filename': dataset['filename'], #.split(".")[0],
                'mappings_filename': dataset['mappings_filename'],
                'shapes_filename': dataset['shapes_filename'] }
 
@@ -33,8 +34,93 @@ def generate_one(template, dataset_id):
     
     parse_dags()
 
+def diagram_to_rdf(ssot_id):
+    ssot = get_ssots(id=ssot_id)
+    plugin_dir = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/")
+    env = Environment(loader=FileSystemLoader(plugin_dir))
+    template_obj = env.get_template(f'dag_templates/diagram_to_rdf.jinja2')
+    
+    inputs = { 'ssot_id': ssot_id,
+               'project_id' : ssot['project_id'],
+               'ssot_filename': ssot['ssot_filename'] }
+
+    with open(f"dags/{ssot_id}_diagram_to_rdf.py", "w") as f:
+        f.write(template_obj.render(inputs))
+    
+    parse_dags()
+
+def materialisation(ssot_id):
+    ssot = get_ssots(id=ssot_id)
+    plugin_dir = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/")
+    env = Environment(loader=FileSystemLoader(plugin_dir))
+    template_obj = env.get_template(f'dag_templates/materialisation.jinja2')
+    
+    inputs = { 'ssot_id': ssot_id,
+               'project_id' : ssot['project_id'],
+               'ssot_filename': ssot['ssot_filename'] }
+
+    with open(f"dags/{ssot_id}_materialisation.py", "w") as f:
+        f.write(template_obj.render(inputs))
+    
+    parse_dags()
+
+
+def validation(ssot_id):
+    ssot = get_ssots(id=ssot_id)
+    plugin_dir = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/")
+    env = Environment(loader=FileSystemLoader(plugin_dir))
+    template_obj = env.get_template(f'dag_templates/validation.jinja2')
+    
+    inputs = { 'ssot_id': ssot_id,
+               'project_id' : ssot['project_id'],
+               'ssot_filename': ssot['ssot_filename'] }
+
+    with open(f"dags/{ssot_id}_validation.py", "w") as f:
+        f.write(template_obj.render(inputs))
+    
+    parse_dags()
+
+
+def create_endpoint(project_id):
+    ssot_id = project_id + "_ssot"
+    plugin_dir = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/")
+    env = Environment(loader=FileSystemLoader(plugin_dir))
+    template_obj = env.get_template(f'dag_templates/create_endpoint.jinja2')
+
+    inputs = { 'ssot_id': ssot_id,
+               'project_id': project_id }
+
+    with open(f"dags/{project_id}_create_endpoint.py", "w") as f:
+        f.write(template_obj.render(inputs))
+
+    parse_dags()
+
+
+def generate_ssot(ssot_id):
+    diagram_to_rdf(ssot_id)
+    materialisation(ssot_id)
+    validation(ssot_id)
+    # ssot = get_ssots(id=ssot_id)
+    # plugin_dir = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/")
+    # env = Environment(loader=FileSystemLoader(plugin_dir))
+    # template_obj = env.get_template(f'dag_templates/ssot.jinja2')
+    
+    # inputs = { 'ssot_id': ssot_id,
+    #            'project_id' : ssot['project_id'],
+    #            'ssot_filename': ssot['ssot_filename'] }
+
+    # with open(f"dags/{ssot_id}_ssot.py", "w") as f:
+    #     f.write(template_obj.render(inputs))
+    
+    parse_dags()
+
+
 def parse_dags():
     command = ["airflow", "dags", "reserialize"]
+    result = subprocess.run(command, capture_output=True, text=True)
+
+def unpause(dag_id):
+    command = ["airflow", "dags", "unpause", dag_id]
     result = subprocess.run(command, capture_output=True, text=True)
 
 def trigger(dag_id):

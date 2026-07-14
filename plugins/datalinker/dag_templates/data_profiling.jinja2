@@ -1,0 +1,39 @@
+import os
+from airflow import DAG, Dataset
+from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
+from datetime import datetime, timedelta
+from airflow import configuration as conf
+import pandas as pd
+from ydata_profiling import ProfileReport
+
+{{ dataset_id }}_raw = Dataset("dl://{{ dataset_id }}/raw")
+
+def generate_profile():
+    df = pd.read_csv(os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}/{{ dataset_id }}/raw/{{ filename }}"))
+    # Generate a Pandas Profiling report
+    profile = ProfileReport(df, minimal=True)
+    profile.config.html.navbar_show = False
+    profile.to_file(output_file=os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}/{{ dataset_id }}/profile/{{ dataset_id }}_profile.html"))
+    return 1
+    
+with DAG(
+    dag_id="{{ dataset_id }}_data_profiling", 
+    description="Exploratory data analysis DAG for {{ dataset_id }} dataset",
+    start_date=datetime(year=2025, month=2, day=1) , 
+    catchup=False,
+    schedule=None ,
+    default_args={
+        'owner': 'admin',
+        'retries': 5,
+        'retry_delay': timedelta(seconds=5)
+    }
+    ) as dag:
+
+    data_profiling = PythonOperator(
+        outlets = [{{ dataset_id }}_raw],
+        task_id='data_profiling',
+        python_callable=generate_profile,
+        )
+
+    data_profiling

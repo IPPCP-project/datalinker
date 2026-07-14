@@ -1,0 +1,214 @@
+{% extends base_template %}
+
+{% block content %}
+<style>
+  .tab-content {
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    padding: 10px;
+  }
+</style>
+<div class="col-sm-12">
+<div class="row">
+  <div class="col-sm-12">
+    <h4><a href="{{url_for('.pj_index')}}"><small>Datalinker</small></a> {{ project['title'] }} </h4>
+  </div>
+</div>
+<ul class="nav nav-tabs" role="tablist">
+  <li role="presentation" class="active">
+    <a href="#details" aria-controls="home" role="tab" data-toggle="tab">Details</a>
+  </li>  
+  <li role="presentation">
+    <a href="#datasets" aria-controls="profile" role="tab" data-toggle="tab">Datasets</a>
+  </li>
+  <li role="presentation">
+    <a href="#ssot" aria-controls="messages" role="tab" data-toggle="tab">SSoT</a>
+  </li>
+  <li role="presentation">
+    <a href="#endpoint" aria-controls="home" role="tab" data-toggle="tab">Endpoint (SPARQL)</a>
+  </li>
+</ul>
+<div class="tab-content">
+  <div role="tabpanel" class="tab-pane fade in active" id="details">
+    <div class="row">
+      <div class="col-sm-offset-1 col-sm-4">
+        <br>
+        <ul class="list-unstyled">
+        <label for="title">Project title</label>
+        <li class="list-group-item">{{ project['title'] }}</li>
+        <label for="description">Use case definition</label>
+        <li class="list-group-item">{{ project['use_case'] }}</li>
+        <label for="project_id">Project ID</label>
+        <li class="list-group-item">{{ project_id }}</li>
+        <label for="creation_date">Creation date</label>
+        <li class="list-group-item">{{ project['created'] }}</li>
+        <label for="project_uri">Project URI</label>
+        <li class="list-group-item"><a href="{{ project['project_uri'] }}">{{ project['project_uri'] }}</a></li>    
+        </ul>
+      </div>
+      <div class="col-sm-5 ">
+        <br>
+        <label for="title">Data requirements</label>
+        <ul class="list-unstyled">
+          {% for data_requirement in data_requirements %}
+          <li class="list-group-item">
+            {{ data_requirement['data_requirement'] }}
+          </li>
+          {% endfor %}
+        </ul>
+        <label for="title">Data sources</label>
+        <ul class="list-group list-group-flush">
+          {% for data_source in data_sources %}
+          <li class="list-group-item">
+            <a href="{{ data_source['data_source'] }}">{{ data_source['data_source'] }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="col-sm-offset-1 col-sm-1"> <a href="{{url_for('.pj_edit', project_id=project_id)}}">Edit</a></div>
+
+    </div>
+  </div>
+  <div role="tabpanel" class="tab-pane fade active" id="datasets">
+    <div class="row">
+      <div class="col-sm-12">
+        <a class="action" href="{{ url_for('.ds_create', project_id=project_id) }}">Create dataset </a>
+      </div>
+    </div>
+    <br>
+  {% for dataset in datasets %}
+  <div class="row" style="padding-left: 30px;">
+    <article>
+      <div class="col-sm-3">
+        <div>
+          <h4> <a href="{{ url_for('.ds_config', dataset_id=dataset['dataset_id']) }}">{{ dataset['title'] }}</a></h4>
+          <div> created on {{ dataset['created'][0:16] }}</div>
+        </div>
+          <a class="action" href="{{ url_for('.ds_edit', dataset_id=dataset['dataset_id']) }}">Edit</a>
+          <a class="action" href="{{ url_for('.ds_config', dataset_id=dataset['dataset_id']) }}">Open</a>
+          <p class="body">{{ dataset['description'] }} </p>
+      </div>
+      <div class="col-sm-9 col-sm-pull-1">
+      <iframe src="{{ url_for('.ds_profile', dataset_id=dataset['dataset_id']) }}" style="height:250px;width:1000px;border:none;" title="Exploratory data analysis"></iframe>
+      </div>
+    </article>
+  </div>
+  <hr>
+  {% endfor %}
+  </div>
+  
+  <div role="tabpanel" class="tab-pane fade active" id="ssot">
+    <br>
+    <label class="control-label" for="conceptualisation">Single source of truth</label>
+        <p>Transformation operations + mappings + ontology + validation shapes. All in a single diagram in Chowlk notation.</p>
+    <hr>
+    <form method="post" enctype="multipart/form-data" role="form">
+      <div class="form-group">
+      {% if project['ssot_uri'] == None %}
+        <input class="form-control-file" type='file' name='ssot_file' required>
+      </div>
+      <input class="btn btn-primary" type="submit" value="Load" formaction="{{url_for('.load_ssot', project_id=project_id)}}" formmethod="post">
+      {% else %}
+      <input class="form-control" name="template" id="template" value="ssot" type="hidden">
+      <p> &emsp; <a class="action" href="{{url_for('.download', file_path=project_id+'/ssot/'+project['ssot_filename'])}}">{{ project['ssot_filename'] }}</a> &emsp; <input class="btn btn-danger btn-sm" type="submit" value="x" formaction="{{url_for('.ssot_delete', ssot_id=project['ssot_id'])}}" formmethod="post" onclick="return confirm('Are you sure?');"></p>
+      </div>
+      <!-- <input class="btn btn-secondary" type="submit" value="Generate Diagram to RDF DAG" formaction="{{url_for('.diagram_to_rdf_dag', ssot_id=project['ssot_id'])}}" formmethod="post">  
+      <input class="btn btn-secondary" type="submit" value="Generate Materialisation DAG" formaction="{{url_for('.materialisation_dag', ssot_id=project['ssot_id'])}}" formmethod="post">  
+      <input class="btn btn-secondary" type="submit" value="Generate Validation DAG" formaction="{{url_for('.validation_dag', ssot_id=project['ssot_id'])}}" formmethod="post">   -->
+      <input class="btn btn-secondary" type="submit" value="Construct and validate knowledge graph" formaction="{{url_for('.generate_run_ssot_dags', ssot_id=project['ssot_id'])}}" formmethod="post">  
+      <div id="drawio-diagram"></div>
+      <script type="text/javascript" src="https://www.draw.io/js/viewer.min.js"></script>
+
+      <script>
+        (function () {
+            // Escape HTML
+            const chatMap = {
+                "&": "&amp;",
+                "'": "&#x27;",
+                "`": "&#x60;",
+                '"': "&quot;",
+                "<": "&lt;",
+                ">": "&gt;",
+            };
+
+            function replaceMatchedCharacters(match) {
+                return chatMap[match];
+            }
+
+            function escapeHTML(string) {
+                if (typeof string !== "string") return string;
+                return string.replace(/[&'`"<>]/g, replaceMatchedCharacters);
+            }
+
+            // Draw.io converter
+            function createMxGraphData(xml, idx = new Date().getTime()) {
+                return {
+                    editable: false,
+                    highlight: "#0000ff",
+                    nav: false,
+                    toolbar: null,
+                    edit: null,
+                    resize: true,
+                    lightbox: "open",
+                    xml,
+                };
+            }
+
+            async function drawioConverterAsync(xml, idx) {
+                return new Promise((resolve) => {
+                    const mxGraphData = createMxGraphData(xml, idx);
+                    const json = JSON.stringify(mxGraphData);
+                    const mxGraphHTML = createMxGraphHTML(json);
+                    resolve(mxGraphHTML);
+                });
+            }
+
+            function createMxGraphHTML(json) {
+                return `<div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph="${escapeHTML(json)}"></div>`;
+            }
+
+            // Load Draw.io file
+            function loadDrawioFile(url) {
+                fetch(url)
+                    .then((response) => {
+                        return response.text();
+                    })
+                    .then((data) => {
+                        return drawioConverterAsync(data);
+                    })
+                    .then((content) => {
+                        const graphContainer = document.getElementById('drawio-diagram');
+                        graphContainer.innerHTML = content;
+                        window.GraphViewer.processElements();
+                    })
+                    .catch((err) => {
+                        console.error("Error loading draw.io file:", err);
+                    });
+            }
+
+            // Initialize
+            loadDrawioFile("{{url_for('.download', file_path=project_id+'/ssot/'+project['ssot_filename'])}}");
+        })();
+      </script>  
+      {% endif %}
+
+      <hr>
+    </form>
+    </div>
+  <div role="tabpanel" class="tab-pane fade active" id="endpoint">
+    <form method="post" enctype="multipart/form-data" role="form">
+      <input class="btn btn-primary" type="submit" value="Enable SPARQL endpoint" formaction="{{url_for('.create_endpoint_dag', project_id=project_id)}}"
+       formmethod="post">
+    </form>
+    <a href="{{url_for('.download', file_path=project_id+'/rdf/'+project_id+'-asserted.nt')}}" class="metadata-link btn btn-primary">
+              <i class="fa fa-download" aria-hidden="true"></i> Download complete Knowledge Graph (NT format)
+    </a>
+    <br>
+    <iframe src="http://localhost:7878" style="height:1000px;width:1000px;border:none;" title="SPARQL endpoint"></iframe>
+  </div>
+  <form action="{{ url_for('.pj_index') }}" method="get">
+    <input type="submit" value="Back to projects" >
+  </form>
+
+{% endblock %}

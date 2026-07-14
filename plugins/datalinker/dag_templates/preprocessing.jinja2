@@ -5,15 +5,15 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 from airflow import configuration as conf
 
-{{ id }}_raw = Dataset("dl://{{ id }}/raw")
-{{ id }}_refined = Dataset("dl://{{ id }}/refined")
+{{ dataset_id }}_raw = Dataset("dl://{{ dataset_id }}/raw")
+{{ dataset_id }}_refined = Dataset("dl://{{ dataset_id }}/refined")
 
 with DAG(
-    dag_id="{{ id }}_preprocessing", 
-    description="LD pre-processing DAG for {{ id }} dataset",
+    dag_id="{{ dataset_id }}_preprocessing", 
+    description="LD pre-processing DAG for {{ dataset_id }} dataset",
     start_date=datetime(year=2025, month=2, day=1) , 
     catchup=False,
-    schedule=[{{ id }}_raw] ,
+    schedule=[{{ dataset_id }}_raw] ,
     default_args={
         'owner': 'admin',
         'retries': 5,
@@ -23,13 +23,13 @@ with DAG(
 
     preprocessing = BashOperator(
         cwd = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/"),
-        outlets = [{{ id }}_refined],
+        outlets = [{{ dataset_id }}_refined],
         task_id='preprocessing',
         bash_command="chmod +x tools/openrefine-batch-docker.sh; \
                     ./tools/openrefine-batch-docker.sh \
-                        -a ./data/{{ id }}/raw/ \
-                        -b ./data/{{ id }}/preprocessing/ \
-                        -c ./data/{{ id }}/refined/ \
+                        -a ./data/{{ project_id }}/{{ dataset_id }}/raw/ \
+                        -b ./data/{{ project_id }}/{{ dataset_id }}/preprocessing/ \
+                        -c ./data/{{ project_id }}/{{ dataset_id }}/refined/ \
                         -e csv \
                         -f csv \
                         -i trimStrings=true \

@@ -7,60 +7,90 @@ def get_db():
     if 'db' not in g:
         g.db = Graph(store="SQLAlchemy", identifier="my_triplestore")
         g.db.open("sqlite:///rdf_store.db", create=True) 
+    if 'pf' not in g:
+        g.pf = """
+        PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+        PREFIX dl: <http://datalinker.io/ld/ontology#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX dcterms: <http://purl.org/dc/terms/
+        """
     return g.db
 
-def get_projects():
-    db = get_db()
+def get_projects(id="?project_id"):
+    db = get_db()    
+    # Convert to pass a string argument
+    if id != "?project_id":
+        id = f'"{id}"'
     # Query using SPARQL
-    query = """
-        PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-        PREFIX dl: <http://datalinker.net/ldp/ontology#>
-        PREFIX dcterms: <http://purl.org/dc/terms/> 
-        SELECT * WHERE{
-            <%s> foaf:currentProject ?project.
-            ?project rdfs:label ?title;
-                dcterms:created ?created;
-                # dcterms:modified ?modified;
-                dcterms:identifier ?id.
-        }""" % (g.user["user"]["value"])
     query = """
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
     PREFIX dl: <http://datalinker.io/ld/ontology#>
     PREFIX dcterms: <http://purl.org/dc/terms/> 
-    PREFIX dcat: <http://www.w3.org/ns/dcat#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-
-    SELECT DISTINCT * WHERE {
-        ?dataset_uri a dcat:Dataset;
-            dl:filename ?filename;
-            dcterms:title ?title;
-            rdfs:comment ?description;
+    SELECT * WHERE{
+        ?project_uri a dl:Project;
+            rdfs:label ?title;
+            dl:useCaseDefinition ?use_case;
             dcterms:created ?created;
             dcterms:identifier %s.
             OPTIONAL {
-            ?dataset_uri dl:preprocessingOperations ?preproc_ops.
-            ?preproc_ops dl:filename ?preproc_ops_filename;
-                        dcterms:identifier ?preproc_ops_id.
+            ?project_uri dl:ontology ?ontology_uri.
+            ?ontology_uri dl:filename ?ontology_filename;
+                        dcterms:identifier ?ontology_id.
             }
             OPTIONAL {
-            ?dataset_uri dl:mappings ?mappings.
-            ?mappings dl:filename ?mappings_filename;
-                        dcterms:identifier ?mappings_id.
+            ?project_uri dl:ssot ?ssot_uri.
+            ?ssot_uri dl:filename ?ssot_filename;
+                dcterms:identifier ?ssot_id.            
             }
-            OPTIONAL {
-            ?dataset_uri dl:shapes ?shapes.
-            ?shapes dl:filename ?shapes_filename;
-                        dcterms:identifier ?shapes_id.
-            }
-    }"""% id 
+    }""" % (id)
     projects = db.query(query)
+    # For a specific results the "projects" is a single output instead of a set
+
+    if id != "?project_id":
+        for project in projects:
+            projects = project
 
     return projects
 
-def get_datasets(id="?id"):
+def get_data_sources(id):
+    id = f'"{id}"'
+    db = get_db()    
+    # Query using SPARQL
+    query = """
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX dl: <http://datalinker.io/ld/ontology#>
+    PREFIX dcterms: <http://purl.org/dc/terms/> 
+    SELECT * WHERE{
+        ?project_uri a dl:Project;
+            dcterms:identifier %s;
+            dl:dataSource ?data_source.
+    }""" % (id)
+    data_sources = db.query(query)
+    return data_sources
+
+
+def get_data_requirements(id):
+    id = f'"{id}"'
+    db = get_db()    
+    # Query using SPARQL
+    query = """
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX dl: <http://datalinker.io/ld/ontology#>
+    PREFIX dcterms: <http://purl.org/dc/terms/> 
+    SELECT * WHERE{
+        ?project_uri a dl:Project;
+            dcterms:identifier %s;
+            dl:dataRequirement ?data_requirement.
+    }""" % (id)
+    data_requirements = db.query(query)
+    return data_requirements
+
+def get_datasets(pj_id="?project_id", id="?dataset_id"):
     db = get_db()
     # Convert to pass a string argument
-    if id != "?id":
+    if pj_id != "?project_id":
+        pj_id = f'"{pj_id}"'
+    if id != "?dataset_id":
         id = f'"{id}"'
     # Query using SPARQL
     query = """
@@ -71,6 +101,9 @@ def get_datasets(id="?id"):
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
     SELECT DISTINCT * WHERE {
+        ?project_uri a dl:Project;
+            dcterms:identifier %s;
+            dcat:dataset ?dataset_uri.            
         ?dataset_uri a dcat:Dataset;
             dl:filename ?filename;
             dcterms:title ?title;
@@ -92,14 +125,46 @@ def get_datasets(id="?id"):
             ?shapes dl:filename ?shapes_filename;
                         dcterms:identifier ?shapes_id.
             }
-    }"""% id 
+    }"""% (pj_id, id) 
     datasets = db.query(query)
     # For a specific results the "datasets" is a single output instead of a set
-    if id != "?id":
+    if id != "?dataset_id":
         for dataset in datasets:
             datasets = dataset
 
     return datasets
+
+def get_ssots(pj_id="?project_id", id="?ssot_id"):
+    db = get_db()
+    # Convert to pass a string argument
+    if pj_id != "?project_id":
+        pj_id = f'"{pj_id}"'
+    if id != "?ssot_id":
+        id = f'"{id}"'
+    # Query using SPARQL
+    query = """
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX dl: <http://datalinker.io/ld/ontology#>
+    PREFIX dcterms: <http://purl.org/dc/terms/> 
+    PREFIX dcat: <http://www.w3.org/ns/dcat#>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+    SELECT DISTINCT * WHERE {
+        ?project_uri a dl:Project;
+            dcterms:identifier %s.
+        OPTIONAL {
+            ?project_uri dl:ssot ?ssot_uri.
+            ?ssot_uri dl:filename ?ssot_filename;
+                        dcterms:identifier %s.
+            }
+    }"""% (pj_id, id) 
+    ssots = db.query(query)
+    # For a specific results the "ssots" is a single output instead of a set
+    if id != "?ssot_id":
+        for ssot in ssots:
+            ssots = ssot
+    return ssots
+
 
 ### SQLITE3 DB
 # def get_db():

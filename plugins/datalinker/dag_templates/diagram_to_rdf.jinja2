@@ -1,0 +1,55 @@
+import os
+from airflow import DAG, Dataset
+from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
+from airflow.providers.docker.operators.docker import DockerOperator
+from datetime import datetime, timedelta
+from airflow import configuration as conf
+from docker.types import Mount
+
+{{ ssot_id }}_ssot_diagram = Dataset("dl://{{ ssot_id }}/ssot-diagram")
+{{ ssot_id }}_ssot_rdf = Dataset("dl://{{ ssot_id }}/ssot-rdf")
+
+with DAG(
+    dag_id="{{ ssot_id }}_diagram_to_rdf", 
+    description="Diagram to RDF conversion DAG for '{{ ssot_id }}' Single Source of Truth diagram",
+    start_date=datetime(year=2026, month=4, day=13) , 
+    catchup=False,
+    schedule=None, #[{{ ssot_id }}_ssot_diagram] ,
+    default_args={
+        'owner': 'admin',
+        'retries': 5,
+        'retry_delay': timedelta(seconds=5)
+    }
+    ) as dag:
+
+    drawio_to_xml = BashOperator(
+        cwd = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}"),
+        task_id='drawio_to_xml',
+        bash_command="cp ssot/{{ ssot_filename }} ssot/{{ ssot_filename.split('.')[0] }}.xml",
+        )
+
+
+    diagram_to_rdf = DockerOperator(
+        docker_url="unix://var/run/docker.sock",  # replace it with swarm/docker endpoint tcp://localhost:2375
+        image="chowlk-chowlk:latest",
+        auto_remove="force",
+        network_mode="bridge",
+        mounts=[
+            Mount(source=os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}/ssot"), target="/home/app/ssot/", type="bind"),
+        ], 
+        task_id="diagram_to_rdf",
+        # do_xcom_push=True,
+        command="python3 /home/app/converter.py /home/app/ssot/{{ ssot_filename.split('.')[0] }}.xml /home/app/ssot/{{ ssot_filename.split('.')[0] }}.ttl --type ontology --format ttl",
+        dag=dag,
+    )
+
+    ttl_fix = BashOperator(
+        cwd = os.path.join(conf.AIRFLOW_HOME, f"plugins/datalinker/data/{{ project_id }}"),
+        task_id='ttl_fix',
+        outlets = [{{ ssot_id }}_ssot_rdf],
+        bash_command="""sed -i 's/a owl:NamedIndividual ;//g' ssot/{{ ssot_filename.split('.')[0] }}.ttl""",
+        )
+    drawio_to_xml >> diagram_to_rdf >> ttl_fix
+
+# docker run -v $(pwd)/plugins/datalinker/data/dl/:/app/files --rm morph-kgc:latest /app/files/mappings/config.ini
