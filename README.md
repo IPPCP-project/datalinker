@@ -18,3 +18,9 @@ _The plugin was developed using the 2.10.4 version of Airflow (yet to test with 
 4. By pressing the Construct and validate knowledge graph button the plugin generates and triggers the DAGS for the diagram conversion to triples, plus for the knowledge graph materialisation and validation following what has been declared in the diagram.
 5. The outputs of such operations will be available in the `plugins/datalinker/data/<project_id>` folder.
 6. The Endpoint tab contains two options: **Enable SPARQL endpoint** (_which creates and triggers a new DAG that serves the knowledge graph in the port 7878_) and **Download complete Knowledge Graph (NT serialisation)** (_with the hyperlink to the asserted data_)
+
+## Aknowledgements
+
+This project has been funded by the European Union's European Data Space far Smart Communities - DS4SSCC-DEP action under grant agreement no.101123342 in the Digital Europe Programme as part of the Piloting Programme in relation to the Project 2025-3-1 - IPPCP.
+
+<img src="https://images.squarespace-cdn.com/content/v1/63718ba2d90d0263d7fc1857/415e1aec-464c-4e5a-aa59-4e11ee295281/Logo+Color-min.png?format=300w" height="80"/>
