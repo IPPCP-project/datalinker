@@ -23,6 +23,4 @@ _The plugin was developed using the 2.10.4 version of Airflow (yet to test with 
 
 This project has been funded by the European Union's European Data Space far Smart Communities - DS4SSCC-DEP action under grant agreement no.101123342 in the Digital Europe Programme as part of the Piloting Programme in relation to the Project 2025-3-1 - IPPCP.
 
-<img src="https://www.zaragoza.es/cont/vistas/portal/ippcp/img/logo-color.png" height="100"/>
-<img src="https://images.squarespace-cdn.com/content/v1/63718ba2d90d0263d7fc1857/415e1aec-464c-4e5a-aa59-4e11ee295281/Logo+Color-min.png?format=300w" height="80"/> 
-<img src="https://www.eacea.ec.europa.eu/sites/default/files/styles/embed_large/public/2022-11/EN%20Co-Funded%20by%20the%20EU_POS.png?itok=wassLT3Og" height="80"/>
+<img height="100" alt="logo-color" src="https://github.com/user-attachments/assets/50712b11-ec2d-4947-8313-a35ffe94fd5d" /> <img src="https://images.squarespace-cdn.com/content/v1/63718ba2d90d0263d7fc1857/415e1aec-464c-4e5a-aa59-4e11ee295281/Logo+Color-min.png?format=300w" height="80"/> <img height="80" alt="EN_Co-fundedbytheEU_RGB_POS" src="https://github.com/user-attachments/assets/826c43cb-e649-436b-be92-1940da9d21fd" />
